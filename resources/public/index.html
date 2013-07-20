@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<head>
+  <title>biomorphs</title>
+
+  <meta name="viewport" content="width=device-width, user-scalable=no" />
+
+  <script src="/webjars/jquery/1.9.1/jquery.js"></script>
+
+  <link rel="stylesheet" href="/webjars/jquery-ui-themes/1.10.0/ui-darkness/jquery-ui.css" />
+  <script src="/webjars/jquery-ui/1.10.2/ui/jquery-ui.js"></script>
+
+  <script src="/mondrian/js/jquery.ui.touch-punch.js"></script>
+
+  <link rel="stylesheet" href="/mondrian/css/mondrian.css" />
+
+  <script src="/js/biomorphs_dev.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      // Connect the REPL.
+      biomorphs.repl.connect();
+
+      // Add the FPS counter.
+      mondrian.anim.add_fps($('#fps')[0]);
+
+      // Start the animation(s).
+      $('.mondrian.biomorphs').each(function (index) {
+        biomorphs.biomorphs.biomorphs_anim(this);
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <div class="mondrian biomorphs"
+       data-value-persist-image="false">
+    <div>FPS: <span id="fps"></span></div>
+
+    <canvas width="320" height="320"></canvas>
+
+    <div class="togglegroup control"
+         data-label="Options:"
+         data-button1-name="persist-image"
+         data-button1-label="Persist Image">
+    </div>
+
+<!-- Sample Controls
+    <div class="togglegroup control"
+      data-label="Options:"
+      data-button1-name="show-wireframe"
+      data-button1-label="Show Wireframe"
+      data-button2-name="persist-image"
+      data-button2-label="Persist Image">
+    </div>
+
+    <div class="radio control"
+         data-name="variant"
+         data-label="Size:"
+         data-choice1-label="Small"
+         data-choice1-value="1"
+         data-choice2-label="Medium"
+         data-choice2-value="3"
+         data-choice3-label="Large"
+         data-choice3-value="5">
+    </div>
+
+    <div class="slider control"
+         data-name="max-speed"
+         data-label="Max Speed:"
+         data-min="1"
+         data-max="100">
+    </div>
+
+    <div class="slider control"
+         data-name="rotation"
+         data-label="Rotation:"
+         data-min="0"
+         data-max="15"
+         data-step="0.1">
+    </div>
+-->
+  </div>
+</body>
