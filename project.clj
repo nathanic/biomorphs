@@ -16,7 +16,8 @@
   :plugins [[lein-cljsbuild "0.3.2"]
             [lein-ring "0.8.3"]]
   :hooks [leiningen.cljsbuild]
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :repl-options {:timeout 240000
+                 :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :source-paths ["src/clj"]
   :resource-paths ["resources" "target/resources"]

@@ -27,3 +27,10 @@
                       :port 9000
                       :serve-static false)
                     cljs.repl/-setup)))
+
+(comment
+  (in-ns 'user)
+  (js/alert "yoyo")
+  (do (require 'cemerick.piggieback) (cemerick.piggieback/cljs-repl))
+
+  )
