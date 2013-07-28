@@ -16,7 +16,9 @@
   (in-ns 'biomorphs.biomorphs)
   )
 
-
+(defn log [& stuff]
+  (.log js/console (apply str stuff))
+  )
 
 ; might not need most of these anymore
 (def CX 1024)
@@ -30,26 +32,42 @@
   [ctx x y x' y']
   ;; (line (- CX x) (- CY y) (- CX x') (- CY y'))
   (-> ctx
-      (m/save)
+      ;; (m/save)
       ;; (m/scale 1 -1)
+      ;; (m/rotate Math/PI)
       (m/move-to x y)
       (m/line-to x' y')
       (m/stroke)
-      (m/restore))
+      ;; (m/restore)
+      )
   ctx)
+
+;;; there must be a better way than string concatenation
+(defn format-color [[r g b a]]
+  (if (nil? a)
+    (str "rgb(" r "," g "," b ")")
+    (str "rgba(" r "," g "," b ",a)")
+    ))
+
+(comment
+  (format-color [1 2 3])
+  (format-color [1 2 3 4.0])
+  (for [d (range 10)] 
+    (format-color (g/color-for-depth nil d)))
+  )
 
 (defn draw-subtree
   [ctx [x y] genome dir depth-remain]
   (let [[bx by]   (g/calc-branch-vector genome depth-remain dir)
         [x' y']   [(+ x bx) (+ y by)]
-        [r g b]     (g/color-for-depth genome depth-remain)
+        [r g b]   (g/color-for-depth genome depth-remain)
         ]
+    ;; (println "color for" depth-remain "is" (str "rgb(" r "," g "," b ")"))
     (when (pos? depth-remain)
       (-> ctx
           ;; (println "draw-subtree depth-remain" depth-remain " line: " x y bx by)
-          ;;; there must be a better way than string concatenation
-          (m/stroke-style (str "rgb(" r "," g "," b ")"))
-          ;; (apply stroke color)
+          (m/stroke-style "green")
+          ;; (m/stroke-style (format-color [r g b]))
           (line' x y x' y')
           (draw-subtree [x' y'] genome (g/turn-direction dir :left)  (dec depth-remain))
           (draw-subtree [x' y'] genome (g/turn-direction dir :right) (dec depth-remain))
@@ -97,7 +115,9 @@
 (defn update-pipeline
   [state]
   (-> state
-      merge-control-values))
+      merge-control-values
+      ;; (assoc :genome [4 4 4 4 4 4 4 4 4 4 4])
+      ))
 
 
 ;; ---------------------------------------------------------------------
@@ -154,6 +174,7 @@
 (comment
   (do (require 'cemerick.piggieback) (cemerick.piggieback/cljs-repl))
   (js/alert "yoyo")
+  (.log js/console "logging yo!")
   (+ 2 2)
   (stop-updating)
   )

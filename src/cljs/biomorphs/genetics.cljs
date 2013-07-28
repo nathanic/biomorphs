@@ -120,9 +120,9 @@
   [genome depth]
   ; TODO impl this for real
   (nth (cycle [[10 10 240]
-               [200 10 10]
+               [200 100 10]
                [10 200 10]
-               [0 0 0]
+               [100 0 50]
                [200 200 10]
                ])
        depth))
