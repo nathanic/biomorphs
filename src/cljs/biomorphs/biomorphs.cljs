@@ -16,9 +16,18 @@
   (in-ns 'biomorphs.biomorphs)
   )
 
-(defn log [& stuff]
-  (.log js/console (apply str stuff))
+(defn log 
+  "writes to js console.log"
+  [& stuff]
+  (.log js/console (apply str (interpose " " stuff)))
   )
+
+(defn clog 
+  "version of log that ignores its first parameter but returns it;
+  suitable for use in (-> ctx ...) blocks."
+  [ctx & stuff]
+  (apply log stuff)
+  ctx)
 
 ; might not need most of these anymore
 (def CX 1024)
@@ -26,6 +35,16 @@
 (def BIOMORPH-COUNT 9)
 (def CXCELL (/ CX BIOMORPH-COUNT))
 (def CYCELL (/ CY BIOMORPH-COUNT))
+
+(comment
+  ;; maybe a macro like:
+  (defmacro saving-> [ctx & forms]
+    `(-> ctx 
+         (m/save)
+         ~@forms
+         (m/restore)
+         ))
+  )
 
 (defn line' 
   "a version of line that works on upside down coordinates (like math rather than like canvas)"
@@ -35,6 +54,7 @@
       ;; (m/save)
       ;; (m/scale 1 -1)
       ;; (m/rotate Math/PI)
+      (m/begin-path)
       (m/move-to x y)
       (m/line-to x' y')
       (m/stroke)
@@ -56,6 +76,7 @@
     (format-color (g/color-for-depth nil d)))
   )
 
+
 (defn draw-subtree
   [ctx [x y] genome dir depth-remain]
   (let [[bx by]   (g/calc-branch-vector genome depth-remain dir)
@@ -66,8 +87,8 @@
     (when (pos? depth-remain)
       (-> ctx
           ;; (println "draw-subtree depth-remain" depth-remain " line: " x y bx by)
-          (m/stroke-style "green")
-          ;; (m/stroke-style (format-color [r g b]))
+          ;; (m/stroke-style "green")
+          (m/stroke-style (format-color [r g b]))
           (line' x y x' y')
           (draw-subtree [x' y'] genome (g/turn-direction dir :left)  (dec depth-remain))
           (draw-subtree [x' y'] genome (g/turn-direction dir :right) (dec depth-remain))
