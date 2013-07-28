@@ -63,6 +63,7 @@
   ctx)
 
 ;;; there must be a better way than string concatenation
+;;; but this is how mondrian handles it...
 (defn format-color [[r g b a]]
   (if (nil? a)
     (str "rgb(" r "," g "," b ")")
@@ -137,8 +138,9 @@
   [state]
   (-> state
       merge-control-values
-      ;; (assoc :genome [4 4 4 4 4 4 4 4 4 4 4])
-      ))
+      #_(assoc :genome [6 1 9 2 4 5 6 4 4 1 4]
+             :pos [150 400]
+             )))
 
 
 ;; ---------------------------------------------------------------------
@@ -151,23 +153,6 @@
     (-> ctx
         (m/fill-style "rgba(25,29,33,0.75)") ;; Alpha adds motion blur
         (m/fill-rect {:x 0 :y 0 :w w :h h}))))
-
-(defn draw-ball 
-  [{:keys [ctx]}]
-  (-> ctx
-      (m/fill-style "green")
-      (m/circle {:x 100, :y 100, :r 30})
-      (m/text {:text "repl hacksessss", :x 10, :y 10})
-      m/begin-path
-      (m/stroke-style "blue")
-      (m/fill-style "rgba(10,10,200,0.45)")
-      (m/move-to 100 100)
-      (m/line-to 200 200)
-      (m/line-to 100 200)
-      m/close-path
-      m/stroke
-      m/fill
-      ))
 
 (defn render-stack
   [state]
@@ -185,7 +170,7 @@
   {:cx 1024       ;; might be able to just derive these from ctx
    :cy 1024
    :biomorph-count 9
-   :pos [100 100]
+   :pos [100 200]
    :genome [4 1 1 1 1 1 1 1 1 1 1]
    }
   update-pipeline

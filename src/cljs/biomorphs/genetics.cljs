@@ -12,14 +12,14 @@
 (def directions [:n :ne :e :se :s :sw :w :nw])
 ; and the vectors they represent
 (def dir-vectors
-  {:n  [ 0  1]
-   :ne [ 1  1]
+  {:n  [ 0 -1]
+   :ne [ 1 -1]
    :e  [ 1  0]
-   :se [ 1 -1]
-   :s  [ 0 -1]
-   :sw [-1 -1]
+   :se [ 1  1]
+   :s  [ 0  1]
+   :sw [-1  1]
    :w  [-1  0]
-   :nw [-1  1]
+   :nw [-1 -1]
    })
 
 ;; there's probably a better way to do this
@@ -113,7 +113,8 @@
   "returns a pair of gene values coding for length at the specified depth"
   [genome depth]
   (let [xidx (+ (gene-index :xscale369) (mod depth 3))]
-    [xidx (+ 3 xidx)]))
+    [(get genome xidx) 
+     (get genome (+ 3 xidx))]))
 
 (defn color-for-depth
   "calculate the color of this branch based on both the genome and the branch depth"
@@ -122,7 +123,7 @@
   (nth (cycle [[10 10 240]
                [200 100 10]
                [10 200 10]
-               [100 0 50]
+               [200 50 50]
                [200 200 10]
                ])
        depth))
