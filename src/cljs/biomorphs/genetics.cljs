@@ -4,6 +4,13 @@
 ; and calculating their corresponding phenotypes
 ; but no canvas/GUI code
 
+; might not need most of these anymore
+(def CX 1024)
+(def CY 1024)
+(def BIOMORPH-COUNT 9)
+(def CXCELL (/ CX BIOMORPH-COUNT))
+(def CYCELL (/ CY BIOMORPH-COUNT))
+
 (def MIN-GENE 0)
 (def MAX-GENE 19)
 (def MAX-DEPTH 10)

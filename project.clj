@@ -10,7 +10,15 @@
                  [compojure "1.1.5"]
                  [mondrian "0.1.1"]
                  [ring "1.1.8"]
-                 [rm-hull/monet "0.1.7"]]
+                 [rm-hull/monet "0.1.7"]
+                 [jayq "2.4.0"]
+                 ;; [core.async "0.1.0-SNAPSHOT"]
+                 ;; [org.clojure/core.async "0.1.0-SNAPSHOT"]
+                 ]
+
+  ; using my own build from github with `lein install`
+  ;; :repositories {"sonatype-staging"
+  ;;                "https://oss.sonatype.org/content/groups/staging/"}
 
   :min-lein-version "2.1.2"
   :plugins [[lein-cljsbuild "0.3.2"]
