@@ -111,6 +111,7 @@
 ; i guess you're supposed to call your init() yourself from js
 (defn ^:export init []
   (log "init called")
+  ; maybe set up click handlers and such?
   )
 
 (comment

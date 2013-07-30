@@ -56,7 +56,7 @@
 ; NB: we could potentially blow the stack
 ; but the JS impl I saw gets away with it.
 (defn draw-creature [{:keys [ctx genome pos]}]
-  ;; (log "draw-creature")
+  ;; (log "draw-creature" genome "at" pos)
   ;; (println "BEGIN drawing genome")
   (draw-subtree ctx pos genome :n (inc (g/genome-depth genome)))
   ;; (println "END drawing genome")
@@ -69,27 +69,69 @@
     [parent children]
     (let [[former latter] (split-at (/ (count children) 2) children)]
       (vec (concat former '(parent) latter))))
-  
+
   )
 
-(defn pos-from-index [n canvas-width]
-  (let [per-row (-> canvas-width (/ g/CXCELL) Math/floor int)
-        row     (/ n per-row)
-        col     (mod n per-row)]
-    [(* col g/CYCELL) (* row g/CXCELL)]))
+(defn pos-from-index [n canvas-width cell-width cell-height]
+  (let [per-row (int (/ canvas-width cell-width))
+        row     (int (/ n per-row))
+        col     (int (mod n per-row))]
+    [(* col cell-width) (* row cell-height)]))
 
 (comment
+  ; TODO fix this, getting NaN and Infinity
+  (pos-from-index 5 500)
   (map #(pos-from-index % 500) (range 9))
+  (int 42.9)
   )
 
+; maybe set up a one-shot to flick this true after a delay
+; giving the browser repl time to set up
+(def drawing? (atom false))
+
+(js/setTimeout (fn [] 
+                 (log "timeout expired, enabling drawing!")
+                 (reset! drawing? true))
+               2000)
+
+(comment
+  (reset! drawing? true)
+  (reset! drawing? false)
+  )
+
+(defn bounding-box [ctx x y cx cy]
+  (-> ctx
+      (m/begin-path)
+      (m/move-to x y)
+      (m/line-to (+ x cx) y)
+      (m/line-to (+ x cx) (+ cy y))
+      (m/line-to x (+ cy y))
+      (m/line-to x y)
+      (m/stroke-style "red")
+      (m/stroke)
+      )
+  ctx)
+
+; TODO: masked drawing so we don't overlap into another cell
 (defn draw-creatures
-  [{:keys [ctx parent children width height]}]
-  (let [creatures (cons parent children)]
-    (doseq [[n creature] (map-indexed vector creatures)]
-      (log "drawing creature" creature)
-      (draw-creature {:ctx ctx
-                      :genome creature
-                      :pos (pos-from-index n width)})
-      )))
+  [{:keys [ctx parent children]}]
+  (when @drawing?
+    (let [width     (.-width (.-canvas ctx))
+          cxcell    (int (/ width 3))
+          cycell    cxcell
+          creatures (cons parent children)
+          ]
+      (doseq [[n creature] (map-indexed vector creatures)]
+        ;; (log "drawing creature" n "(" creature ") at" (pos-from-index n width) "width: " width)
+        (let [[x y] (pos-from-index n width cxcell cycell)]
+          (bounding-box ctx x y cxcell cycell)
+          (draw-creature {:ctx ctx
+                          :genome creature
+                          ; TODO HACKISH: need a better way of scaling the creatures
+                          ; and aligning them in their cells
+                          :pos [(+ x (/ cxcell 2))
+                                (+ y (* 3 (/ cycell 4)))
+                                ]}))
+        ))))
 
 

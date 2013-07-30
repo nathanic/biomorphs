@@ -5,12 +5,12 @@
 ; but no canvas/GUI code
 
 ; might not need most of these anymore
-(def CX 1024)
-(def CY 1024)
+;; (def CX 1024)
+;; (def CY 1024)
 (def BIOMORPH-COUNT 9)
 (def CHILD-COUNT (dec BIOMORPH-COUNT))
-(def CXCELL (/ CX BIOMORPH-COUNT))
-(def CYCELL (/ CY BIOMORPH-COUNT))
+;; (def CXCELL (int (/ CX BIOMORPH-COUNT)))
+;; (def CYCELL (int (/ CY BIOMORPH-COUNT)))
 
 (def MIN-GENE 0)
 (def MAX-GENE 19)
