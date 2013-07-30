@@ -7,6 +7,7 @@
             [mondrian.ui :as ui]
             [monet.canvas :as m]
             [biomorphs.graphics :as gfx]
+            [biomorphs.genetics :as gen]
             [biomorphs.utils :refer [log]]
             )
   (:use-macros [mondrian.macros :only [defmondrian]]))
@@ -72,11 +73,9 @@
   [state]
   (-> state
       merge-control-values
-      (assoc ;; :genome [7 5 3 1 5 3 3 1 1 1 1]
-             ;:genome [7 1 1 1 1 1 1 1 1 1 1]
-             :genome [7, 4 1 3, 5 1 3, 1 1 1 1]
-             :pos [200 400]
-             )))
+      ;; (assoc )
+
+      ))
 
 
 ;; ---------------------------------------------------------------------
@@ -93,22 +92,20 @@
 (defn render-stack
   [state]
   (clear-background state)
-  (gfx/draw-creature state)
+  (gfx/draw-creatures state)
   )
 
 ;; ---------------------------------------------------------------------
 ;; Main entry point
 ;;
 
-(defmondrian biomorphs-anim
-  {:biomorph-count 9
-   :pos [100 200]
-   ; :parent [4 1 1 1 1 1 1 1 1 1 1]
-   ; :children (for [n (range 8)] (random-genome)
-   :genome [4 1 1 1 1 1 1 1 1 1 1]
-   }
-  update-pipeline
-  render-stack)
+(let [parent [4, 1 2 3, 4 5 6, 7 8 9]]
+  (defmondrian biomorphs-anim
+    {:parent   parent
+     :children (gen/make-children parent)
+     }
+    update-pipeline
+    render-stack))
 
 
 ; i guess you're supposed to call your init() yourself from js

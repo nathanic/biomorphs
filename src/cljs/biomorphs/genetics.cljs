@@ -8,6 +8,7 @@
 (def CX 1024)
 (def CY 1024)
 (def BIOMORPH-COUNT 9)
+(def CHILD-COUNT (dec BIOMORPH-COUNT))
 (def CXCELL (/ CX BIOMORPH-COUNT))
 (def CYCELL (/ CY BIOMORPH-COUNT))
 
@@ -33,7 +34,7 @@
 ;; but i was relying on a JVMism in my previous impl
 (defn index-of [coll item]
   (loop [idx 0, c coll]
-    (if-not (empty? c) 
+    (if-not (empty? c)
       (if (= item (first c))
         idx
         (recur (inc idx) (rest c)))
@@ -53,7 +54,7 @@
     (if-not (= idx -1)
       (nth directions (mod (op idx) (count directions)))
       (throw (js/Error. (str dir " is not a valid direction.")))
-      ))) 
+      )))
 
 (comment
   (turn-direction :n :right)
@@ -75,28 +76,28 @@
 ;; newgenes[7] = rand(); // red
 ;; newgenes[8] = rand(); // green
 ;; newgenes[9] = rand(); // blue
-;; newgenes[10] = rand(); // width 
+;; newgenes[10] = rand(); // width
 
-(def GENES 
-  [:depth 
-   :xscale369 
-   :xscale147 
+(def GENES
+  [:depth
+   :xscale369
+   :xscale147
    :xscale258
-   :yscale369 
-   :yscale147 
+   :yscale369
+   :yscale147
    :yscale258
    :red           ; what about hue here instead?
    :green
    :blue
    :width
    ])
-; other ideas: 
-; segmentation, 
-; segment gradient, 
+; other ideas:
+; segmentation,
+; segment gradient,
 ; symmetries
 ; drawing primitive (line, ellipse, rect, filled/empty variants)
 ;
-; see also http://www.annanardella.it/biomorph.html 
+; see also http://www.annanardella.it/biomorph.html
 ; http://www.phy.syr.edu/courses/mirror/biomorph/
 
 (defn gene-index [gene-id]
@@ -116,11 +117,11 @@
   (random-genome)
   )
 
-(defn length-genes-for-depth 
+(defn length-genes-for-depth
   "returns a pair of gene values coding for length at the specified depth"
   [genome depth]
   (let [xidx (+ (gene-index :xscale369) (mod depth 3))]
-    [(get genome xidx) 
+    [(get genome xidx)
      (get genome (+ 3 xidx))]))
 
 (defn color-for-depth
@@ -149,23 +150,53 @@
 ; i guess cljs doesn't have this
 (defn double [x] x)
 
-(defn genome-depth [genome] 
+(defn genome-depth [genome]
   (mod (int (get-gene genome :depth)) MAX-DEPTH))
 
 
 (defn calc-branch-vector [genome depth dir]
-  (let [max-branch-len  200 ;; (Math/floor (/ CXCELL 2 8)) 
+  (let [max-branch-len  200 ;; (Math/floor (/ CXCELL 2 8))
         [lx ly]         (length-genes-for-depth genome depth)
         [dx dy]         (dir-vectors dir) ]
     ;; var i = x + Math.floor( xoffset*( genes[xGene] * 2579 ) % maxSegmentLen );
     ;; var j = y + Math.floor( yoffset*( genes[yGene] * 5051 ) % maxSegmentLen );
-    ;; [(Math/floor (mod (* lx dx 2579) max-branch-len)) 
+    ;; [(Math/floor (mod (* lx dx 2579) max-branch-len))
     ;;  (Math/floor (mod (* ly dy 5051) max-branch-len))]
 
-    (mapv #(Math/floor (double %)) 
+    (mapv #(Math/floor (double %))
           [(* lx dx (/ max-branch-len MAX-GENE ))
            (* ly dy (/ max-branch-len MAX-GENE )) ])
     ;; [(* dx 100) (* dy 100)]
     ))
 
+
+; ensure a gene does not go out of bounds
+; (or should genes wrap around?)
+(defn saturate-gene [gene]
+  (max MIN-GENE (min MAX-GENE gene)))
+
+; pick a random gene and give it +/- 1
+; this does not ensure uniqueness...
+; could pull from a lazy seq into a set
+; until it's of a certain size...
+; could deterministically vary the genes...
+(defn mutate-genome
+  [genome]
+  (let [idx    (rand-int (count genome))
+        newval (+ (get genome idx) (rand-nth [-1 1])) ]
+      (assoc genome idx (saturate-gene newval))))
+
+(defn make-children [parent-genome]
+  (for [_ (range CHILD-COUNT)]
+    (mutate-genome parent-genome)))
+
+(comment
+
+  (mutate-genome [1, 1 1 1, 1 1 1, 1 1 1])
+
+  (mutate-genome [MAX-GENE, MAX-GENE MAX-GENE MAX-GENE, MAX-GENE MAX-GENE MAX-GENE, MAX-GENE MAX-GENE MAX-GENE])
+
+  (make-offspring [1, 1 1 1, 1 1 1, 1 1 1])
+
+  )
 

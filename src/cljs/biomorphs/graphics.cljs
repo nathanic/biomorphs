@@ -7,15 +7,13 @@
             [mondrian.ui :as ui]
             [monet.canvas :as m]
             [biomorphs.genetics :as g]
-            [biomorphs.genetics :as g]
-            )
-  (:use-macros [mondrian.macros :only [defmondrian]]))
+            [biomorphs.utils :refer [log clog]]
+            ))
 
 
 (defn line'
-  "a version of line that works on upside down coordinates (like math rather than like canvas)"
+  "draw a line."
   [ctx x y x' y']
-  ;; (line (- CX x) (- CY y) (- CX x') (- CY y'))
   (-> ctx
       ;; (m/save)
       ;; (m/scale 1 -1)
@@ -58,9 +56,40 @@
 ; NB: we could potentially blow the stack
 ; but the JS impl I saw gets away with it.
 (defn draw-creature [{:keys [ctx genome pos]}]
-  (log "draw-creature")
+  ;; (log "draw-creature")
   ;; (println "BEGIN drawing genome")
   (draw-subtree ctx pos genome :n (inc (g/genome-depth genome)))
   ;; (println "END drawing genome")
   )
+
+
+(comment
+  (defn all-creatures
+    "return a seq of creatures, with the parent in the middle of the children"
+    [parent children]
+    (let [[former latter] (split-at (/ (count children) 2) children)]
+      (vec (concat former '(parent) latter))))
+  
+  )
+
+(defn pos-from-index [n canvas-width]
+  (let [per-row (-> canvas-width (/ g/CXCELL) Math/floor int)
+        row     (/ n per-row)
+        col     (mod n per-row)]
+    [(* col g/CYCELL) (* row g/CXCELL)]))
+
+(comment
+  (map #(pos-from-index % 500) (range 9))
+  )
+
+(defn draw-creatures
+  [{:keys [ctx parent children width height]}]
+  (let [creatures (cons parent children)]
+    (doseq [[n creature] (map-indexed vector creatures)]
+      (log "drawing creature" creature)
+      (draw-creature {:ctx ctx
+                      :genome creature
+                      :pos (pos-from-index n width)})
+      )))
+
 
