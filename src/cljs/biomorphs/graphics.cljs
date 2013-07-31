@@ -72,15 +72,63 @@
 
   )
 
+
+(defn canvas-dims [ctx]
+  (let [canvas (.-canvas ctx)]
+    [(.-width canvas) (.-height canvas)]))
+
+(defn cell-dims [ctx]
+  (let [width     (.-width (.-canvas ctx))
+        cxcell    (int (/ width 3))
+        cycell    cxcell  ;; should probably really base this on height
+        ]
+    [cxcell cycell]))
+
+
 (defn pos-from-index [n canvas-width cell-width cell-height]
   (let [per-row (int (/ canvas-width cell-width))
         row     (int (/ n per-row))
         col     (int (mod n per-row))]
     [(* col cell-width) (* row cell-height)]))
 
+; use this for mouse event handlers
+(defn pos-to-index [[x y] canvas-width cell-width cell-height]
+  (let [per-row (int (/ canvas-width cell-width))
+        col     (int (/ x cell-width))
+        row     (int (/ y cell-height) )
+        ]
+    (+ col (* row per-row))
+    ))
+
+(defn pos-to-index-from-ctx
+  [ctx pos]
+  (let [[w _]   (canvas-dims ctx)
+        [cx cy] (cell-dims ctx) ]
+    (pos-to-index pos w cx cy)))
+
+; mouse event handlers:
+  ; on click
+    ; determine creature clicked
+    ; generate children for creature
+    ; redraw
+  ; on hover
+    ; determine creature clicked
+      ; highlight that creature in some way?
+        ; how to represent that?
+      ; draw it without clipping, maybe in an overlay??
+      ; show the genes perhaps?
+        ; might just want to do that anyway
+
 (comment
-  ; TODO fix this, getting NaN and Infinity
-  (pos-from-index 5 500)
+  (pos-from-index 5 300 100 100)
+  (pos-to-index [205 105] 300 100 100)
+  (map :eq?
+       (for [idx (range 10)
+             :let [pos (pos-from-index idx 300 100 100)]
+             ]
+         {:idx idx, :pos pos, :eq? (= idx (pos-to-index pos 300 100 100))}
+         ))
+
   (map #(pos-from-index % 500) (range 9))
   (int 42.9)
   )
@@ -89,7 +137,7 @@
 ; giving the browser repl time to set up
 (def drawing? (atom false))
 
-(js/setTimeout (fn [] 
+(js/setTimeout (fn []
                  (log "timeout expired, enabling drawing!")
                  (reset! drawing? true))
                2000)
@@ -116,11 +164,9 @@
 (defn draw-creatures
   [{:keys [ctx parent children]}]
   (when @drawing?
-    (let [width     (.-width (.-canvas ctx))
-          cxcell    (int (/ width 3))
-          cycell    cxcell
-          creatures (cons parent children)
-          ]
+    (let [width           (.-width (.-canvas ctx))
+          [cxcell cycell] (cell-dims ctx)
+          creatures       (cons parent children) ]
       (doseq [[n creature] (map-indexed vector creatures)]
         ;; (log "drawing creature" n "(" creature ") at" (pos-from-index n width) "width: " width)
         (let [[x y] (pos-from-index n width cxcell cycell)]

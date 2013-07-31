@@ -17,6 +17,9 @@
 
   <script type="text/javascript">
     $(document).ready(function () {
+        // set up
+        biomorphs.biomorphs.init();
+
       // Connect the REPL.
       biomorphs.repl.connect();
 
@@ -36,7 +39,7 @@
        data-value-persist-image="false">
     <div>FPS: <span id="fps"></span></div>
 
-    <canvas width="320" height="320"></canvas>
+    <canvas id="biomorphs" width="320" height="320"></canvas>
 
     <div class="togglegroup control"
          data-label="Options:"

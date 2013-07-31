@@ -9,6 +9,9 @@
             [biomorphs.graphics :as gfx]
             [biomorphs.genetics :as gen]
             [biomorphs.utils :refer [log]]
+            [goog.events :as ev]
+            [goog.dom :as dom]
+
             )
   (:use-macros [mondrian.macros :only [defmondrian]]))
 
@@ -64,17 +67,35 @@
 ;;
 ;; After ...:
 
+; temporary hack
+(def canvas-click (atom nil))
+
+; temporary hack
+(defn update-state-from-click [state]
+  (if (nil? @canvas-click)
+    state
+    (let [pos    @canvas-click
+          ctx    (:ctx state)
+          idx    (gfx/pos-to-index-from-ctx ctx pos)
+          parent (nth (cons (:parent state)
+                            (:children state))
+                      idx) ]
+      (reset! canvas-click nil)
+      (assoc state
+             :parent   parent
+             :children (gen/make-children parent)))))
+
 (defn merge-control-values
   "Merge the current values of the controls into state."
   [{:keys [drawing] :as state}]
-  (merge state (ui/update-controls drawing)))
+  (merge state
+         (ui/update-controls drawing)))
 
 (defn update-pipeline
   [state]
   (-> state
       merge-control-values
-      ;; (assoc )
-
+      update-state-from-click
       ))
 
 
@@ -96,6 +117,21 @@
   )
 
 ;; ---------------------------------------------------------------------
+;; Event Handlers
+;;
+
+(defn offset-pos [evt]
+  [(.-offsetX evt) (.-offsetY evt)])
+
+
+(defn on-click-canvas
+  [evt]
+  (log "canvas has been clicked offset " (offset-pos evt))
+  ; part of a gross hack
+  (reset! canvas-click (offset-pos evt))
+  )
+
+;; ---------------------------------------------------------------------
 ;; Main entry point
 ;;
 
@@ -110,8 +146,11 @@
 
 ; i guess you're supposed to call your init() yourself from js
 (defn ^:export init []
-  (log "init called")
-  ; maybe set up click handlers and such?
+  (when (and js/document
+             (.-getElementById js/document))
+    (ev/listen (dom/getElement "biomorphs") "click" on-click-canvas)
+    )
+  (log "init end")
   )
 
 (comment

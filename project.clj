@@ -12,6 +12,11 @@
                  [ring "1.1.8"]
                  [rm-hull/monet "0.1.7"]
                  [jayq "2.4.0"]
+
+                 ; let's try domina then
+                 ;; [domina "1.0.0"]
+                 ;; [org.clojure/google-closure-library-third-party "0.0-2029"]
+
                  [core.async "0.1.0-SNAPSHOT"]
                  ;; [org.clojure/core.async "0.1.0-SNAPSHOT"]
                  ]

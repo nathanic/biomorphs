@@ -190,13 +190,21 @@
   (for [_ (range CHILD-COUNT)]
     (mutate-genome parent-genome)))
 
+; lame way to ensure uniqueness...
+(defn make-children-unique [parent-genome]
+  (loop [children #{}]
+    (if (< (count children) CHILD-COUNT)
+      (recur (conj children (mutate-genome parent-genome)))
+      (vec children))))
+
 (comment
 
   (mutate-genome [1, 1 1 1, 1 1 1, 1 1 1])
 
   (mutate-genome [MAX-GENE, MAX-GENE MAX-GENE MAX-GENE, MAX-GENE MAX-GENE MAX-GENE, MAX-GENE MAX-GENE MAX-GENE])
 
-  (make-offspring [1, 1 1 1, 1 1 1, 1 1 1])
+  (make-children [1, 1 1 1, 1 1 1, 1 1 1])
+  (make-children-unique [1, 1 1 1, 1 1 1, 1 1 1])
 
   )
 
