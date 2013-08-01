@@ -19,6 +19,7 @@
 ; the order of directions we cycle through
 (def directions [:n :ne :e :se :s :sw :w :nw])
 ; and the vectors they represent
+; (in canvas coords)
 (def dir-vectors
   {:n  [ 0 -1]
    :ne [ 1 -1]
@@ -31,7 +32,7 @@
    })
 
 ;; there's probably a better way to do this
-;; but i was relying on a JVMism in my previous impl
+;; but i was relying on a JVMism (.indexOf) previously
 (defn index-of [coll item]
   (loop [idx 0, c coll]
     (if-not (empty? c)
@@ -40,11 +41,7 @@
         (recur (inc idx) (rest c)))
       -1)))
 
-(comment
-  (index-of [:a :b :c] :b)
-  (index-of [:a :b :c] :c)
-  (index-of [:a :b :c] :farts)
-  )
+
 ; make a 45 degree right turn
 ; based on :left or :right
 (defn turn-direction [dir leftright]
@@ -56,13 +53,7 @@
       (throw (js/Error. (str dir " is not a valid direction.")))
       )))
 
-(comment
-  (turn-direction :n :right)
-  (turn-direction :n :left)
-  (turn-direction :e :right)
-  (turn-direction :e :left)
-  (turn-direction "farts" :left)
-  )
+
 
 ;; he uses the following genome
 ;; newgenes = [];
@@ -99,6 +90,12 @@
 ;
 ; see also http://www.annanardella.it/biomorph.html
 ; http://www.phy.syr.edu/courses/mirror/biomorph/
+
+; current genome sucks
+; all the creatures look basically the same
+; maybe try adopting the genome from
+;     http://www.annanardella.it/biomorph.html
+
 
 (defn gene-index [gene-id]
   (let [idx (index-of GENES gene-id)]

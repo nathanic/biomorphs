@@ -66,7 +66,7 @@
 
 ; called from an inline <script>
 (defn ^:export init [canvas]
-  (let [parent [4, 1 2 3, 4 5 6, 7 8 9]
+  (let [parent [3, 1 2 3, 4 5 6, 7 8 9]
         the-state  (atom
                      {:parent parent
                       :children (gen/make-children parent)
