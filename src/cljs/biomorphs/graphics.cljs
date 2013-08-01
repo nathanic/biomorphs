@@ -133,20 +133,6 @@
   (int 42.9)
   )
 
-; maybe set up a one-shot to flick this true after a delay
-; giving the browser repl time to set up
-(def drawing? (atom false))
-
-(js/setTimeout (fn []
-                 (log "timeout expired, enabling drawing!")
-                 (reset! drawing? true))
-               2000)
-
-(comment
-  (reset! drawing? true)
-  (reset! drawing? false)
-  )
-
 (defn bounding-box [ctx x y cx cy]
   (-> ctx
       (m/begin-path)
@@ -163,21 +149,27 @@
 ; TODO: masked drawing so we don't overlap into another cell
 (defn draw-creatures
   [{:keys [ctx parent children]}]
-  (when @drawing?
-    (let [width           (.-width (.-canvas ctx))
-          [cxcell cycell] (cell-dims ctx)
-          creatures       (cons parent children) ]
-      (doseq [[n creature] (map-indexed vector creatures)]
-        ;; (log "drawing creature" n "(" creature ") at" (pos-from-index n width) "width: " width)
-        (let [[x y] (pos-from-index n width cxcell cycell)]
-          (bounding-box ctx x y cxcell cycell)
-          (draw-creature {:ctx ctx
-                          :genome creature
-                          ; TODO HACKISH: need a better way of scaling the creatures
-                          ; and aligning them in their cells
-                          :pos [(+ x (/ cxcell 2))
-                                (+ y (* 3 (/ cycell 4)))
-                                ]}))
-        ))))
+  (let [width           (.-width (.-canvas ctx))
+        [cxcell cycell] (cell-dims ctx)
+        creatures       (cons parent children) ]
+    (doseq [[n creature] (map-indexed vector creatures)]
+      ;; (log "drawing creature" n "(" creature ") at" (pos-from-index n width) "width: " width)
+      (let [[x y] (pos-from-index n width cxcell cycell)]
+        (bounding-box ctx x y cxcell cycell)
+        (draw-creature {:ctx ctx
+                        :genome creature
+                        ; TODO HACKISH: need a better way of scaling the creatures
+                        ; and aligning them in their cells
+                        :pos [(+ x (/ cxcell 2))
+                              (+ y (* 3 (/ cycell 4)))
+                              ]}))
+      )))
 
+
+(defn clear-background [ctx]
+  (let [[w h] (canvas-dims ctx)]
+    (-> ctx
+        ;; (m/fill-style "rgba(25,29,33,0.75)") ;; Alpha adds motion blur
+        (m/fill-style "rgb(25,29,33)")
+        (m/fill-rect {:x 0 :y 0 :w w :h h}))))
 
