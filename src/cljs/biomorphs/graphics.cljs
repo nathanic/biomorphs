@@ -34,7 +34,7 @@
         [x' y']   [(+ x bx) (+ y by)]
         [r g b]   (gen/color-for-depth genome depth-remain)
         ]
-    (log "drawing subtree at depth" depth-remain)
+    ;; (log "drawing subtree at depth" depth-remain)
     (when (pos? depth-remain)
       (-> ctx
           ;; (println "draw-subtree depth-remain" depth-remain " line: " x y bx by)

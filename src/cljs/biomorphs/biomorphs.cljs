@@ -64,11 +64,13 @@
   )
 
 
+; TODO? just have :genomes and the parent is (first (:genomes state))
+
 ; called from an inline <script>
 (defn ^:export init [canvas]
   (let [parent    (gen/default-genome)
         the-state (atom
-                    {:parent parent
+                    {:parent   parent
                      :children (gen/make-children parent)
                      :ctx      (m/get-context canvas "2d")
                      })
@@ -87,24 +89,33 @@
 
 
 ; temporary debug hooks, for use with single.html
-(def DEBUG-canvas (atom nil))
-(def DEBUG-genome (atom (gen/default-genome)))
-(defn ^:export debug-single-biomorph [canvas]
-  (reset! DEBUG-canvas canvas)
+(defn ^:export debug-single-biomorph [canvas genome]
   (let [ctx     (m/get-context canvas "2d")
-        [cx cy] (gfx/canvas-dims ctx) ]
+        [cx cy] (gfx/canvas-dims ctx)
+        genome  (or genome (gen/default-genome))
+        ]
     (gfx/clear-background ctx)
+    (m/stroke-style ctx "red")
+    (m/stroke-rect ctx {:x 0, :y 0, :w cx, :h cy})
     (gfx/draw-creature {:ctx    ctx
-                        :genome @DEBUG-genome
+                        :genome genome
                         :pos    [(/ cx 2)
                                  (/ cy 2) ]
                         })))
 
+(defn try-genome [genome]
+  (debug-single-biomorph (dom/getElementByClass "biomorphs") genome))
+
 (comment
-  ; force redraw
-  (debug-single-biomorph @DEBUG-canvas)
-  (reset! DEBUG-genome [45 45 1 1 1 1 2 2 180])
-  (reset! DEBUG-genome [20 45 1 1 1 1 2 2 180])
+  (map :name gen/GENOTYPE)
+  (try-genome [45 45 1 1 1 1 3 0.9 180])
+  (try-genome [45 45 1 1 1 1 4 0.9 180])
+  (try-genome [45 45 2 1 1 1 2 0.8 180])
+  (try-genome [45 45 2 1 1 1 2 1.5 180])
+  (try-genome [-80 45 -4 2 1 1 6 0.9 180])
+  (try-genome [90 45 1 1 1 1 2 2 180])
+  (try-genome [65 25 1 1 1 1 9 0.9 180])
+  (try-genome [59 45 1 1 1 1 2 2 180])
   )
 
 (comment

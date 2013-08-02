@@ -18,7 +18,7 @@
 (def BIOMORPH-COUNT 9)
 (def CHILD-COUNT (dec BIOMORPH-COUNT))
 (def MUTATION-RATE 0.05)
-(def BASE-BRANCH-LEN 50)
+(def BASE-BRANCH-LEN 30)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Genotype Definition & Gene Manipulation
@@ -76,7 +76,7 @@
     }
    {:name    :gradient
     :index   7
-    :default 2
+    :default 1.0
     :min     0
     :max     1.5
     ; length factor applied with each successive iteration
@@ -143,6 +143,11 @@
   )
 
 
+(defn clamp-genome [genome]
+  (map (fn [{:keys [min max]} gene]
+         (clamp gene min max))
+       genome
+       GENOTYPE))
 
 (defn mutate-gene
   "given a gene definition and gene value, randomly increase or decrease it
@@ -257,13 +262,12 @@
 
 (defn get-genetic-gradient
   "get the cumulative gradient factor for a branch at this depth"
-  [genome depth]
+  [genome depth-remain]
   ; TODO: probably needs adjustment
   ; because we are really passing in depth-remain
-    ; (- (get-genome-iterations genome) depth)
   ; and 0 -> one branching still
   (Math/pow (get-gene genome :gradient)
-            depth))
+            (- (get-genome-iterations genome) depth-remain)))
 
 (defn calc-branch-vector
   "reckon the vector required to make a branch in direction `dir`,
