@@ -11,8 +11,9 @@
 ;; having trouble getting core.async to work
 ;; got it building though, by pulling the source
 ;; and adding a macro for the missing `exists?` definition
-;; however, that means this project will only run on 
+;; however, that means this project will only run on
 ;; machines where i've done a `lein install` of my modified version
+;; UPDATE: `exists?` is supplied by clojurescript in a newer version
 
 (defn data-from-event [event]
   (-> event .-currentTarget $ .data (js->clj :keywordize-keys true)))
@@ -69,6 +70,35 @@
   [ctx & stuff]
   (apply log stuff)
   ctx)
+
+
+;; there's probably a better way to do this
+;; but i was relying on a JVMism (.indexOf) previously
+(defn index-of
+  "return the index of the supplied item, or nil"
+  [coll item]
+  (loop [idx 0, c coll]
+    (if-not (empty? c)
+      (if (= item (first c))
+        idx
+        (recur (inc idx) (rest c)))
+      nil)))
+
+
+(defn index-of-by
+  "return the index of the first item that matches the supplied predicate, or nil."
+  [pred coll]
+  (first
+    (keep-indexed (fn [idx x]
+                    (if (pred x)
+                      idx
+                      nil))
+                  coll)))
+
+
+; now using goog.math/clamp
+;; (defn clamp [x xmin xmax]
+;;   (max xmin (min xmax x)))
 
 (comment
   ;; maybe a macro like:

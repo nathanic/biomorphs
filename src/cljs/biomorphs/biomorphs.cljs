@@ -66,12 +66,12 @@
 
 ; called from an inline <script>
 (defn ^:export init [canvas]
-  (let [parent [3, 1 2 3, 4 5 6, 7 8 9]
-        the-state  (atom
-                     {:parent parent
-                      :children (gen/make-children parent)
-                      :ctx      (m/get-context canvas "2d")
-                      })
+  (let [parent    (gen/default-genome)
+        the-state (atom
+                    {:parent parent
+                     :children (gen/make-children parent)
+                     :ctx      (m/get-context canvas "2d")
+                     })
         ]
     (when (and js/document
                (.-getElementById js/document))
@@ -81,6 +81,30 @@
     (render @the-state)
     )
   (log "init end")
+  )
+
+
+
+
+; temporary debug hooks, for use with single.html
+(def DEBUG-canvas (atom nil))
+(def DEBUG-genome (atom (gen/default-genome)))
+(defn ^:export debug-single-biomorph [canvas]
+  (reset! DEBUG-canvas canvas)
+  (let [ctx     (m/get-context canvas "2d")
+        [cx cy] (gfx/canvas-dims ctx) ]
+    (gfx/clear-background ctx)
+    (gfx/draw-creature {:ctx    ctx
+                        :genome @DEBUG-genome
+                        :pos    [(/ cx 2)
+                                 (/ cy 2) ]
+                        })))
+
+(comment
+  ; force redraw
+  (debug-single-biomorph @DEBUG-canvas)
+  (reset! DEBUG-genome [45 45 1 1 1 1 2 2 180])
+  (reset! DEBUG-genome [20 45 1 1 1 1 2 2 180])
   )
 
 (comment

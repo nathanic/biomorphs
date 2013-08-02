@@ -1,16 +1,10 @@
 (ns biomorphs.graphics
-  (:require [mondrian.anim :as anim]
-            [mondrian.canvas :as canvas]
-            [mondrian.color :as color]
-            [mondrian.math :as math]
-            [mondrian.plot :as plot]
-            [mondrian.ui :as ui]
-            [monet.canvas :as m]
-            [biomorphs.genetics :as g]
+  (:require [monet.canvas :as m]
+            [biomorphs.genetics :as gen]
             [biomorphs.utils :refer [log clog]]
             ))
 
-
+; probably get rid of this one
 (defn line'
   "draw a line."
   [ctx x y x' y']
@@ -36,19 +30,19 @@
 
 (defn draw-subtree
   [ctx [x y] genome dir depth-remain]
-  (let [[bx by]   (g/calc-branch-vector genome depth-remain dir)
+  (let [[bx by]   (gen/calc-branch-vector genome depth-remain dir)
         [x' y']   [(+ x bx) (+ y by)]
-        [r g b]   (g/color-for-depth genome depth-remain)
+        [r g b]   (gen/color-for-depth genome depth-remain)
         ]
-    ;; (println "color for" depth-remain "is" (str "rgb(" r "," g "," b ")"))
+    (log "drawing subtree at depth" depth-remain)
     (when (pos? depth-remain)
       (-> ctx
           ;; (println "draw-subtree depth-remain" depth-remain " line: " x y bx by)
           ;; (m/stroke-style "green")
           (m/stroke-style (format-color [r g b]))
           (line' x y x' y')
-          (draw-subtree [x' y'] genome (g/turn-direction dir :left)  (dec depth-remain))
-          (draw-subtree [x' y'] genome (g/turn-direction dir :right) (dec depth-remain))
+          (draw-subtree [x' y'] genome (gen/turn-direction dir :left)  (dec depth-remain))
+          (draw-subtree [x' y'] genome (gen/turn-direction dir :right) (dec depth-remain))
           )
       ))
   ctx)
@@ -58,7 +52,7 @@
 (defn draw-creature [{:keys [ctx genome pos]}]
   ;; (log "draw-creature" genome "at" pos)
   ;; (println "BEGIN drawing genome")
-  (draw-subtree ctx pos genome :n (inc (g/genome-depth genome)))
+  (draw-subtree ctx pos genome :n (inc (gen/get-genome-iterations genome)))
   ;; (println "END drawing genome")
   )
 

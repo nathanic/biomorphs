@@ -1,187 +1,171 @@
-(ns biomorphs.genetics)
+(ns biomorphs.genetics
+  (:require [biomorphs.utils :refer [index-of index-of-by]]
+            [goog.math :refer [clamp angleDx angleDy]]
+            )
+  )
 
 ; logic for defining and manipulating genomes
 ; and calculating their corresponding phenotypes
-; but no canvas/GUI code
+; (but no canvas/GUI code)
 
-; might not need most of these anymore
-;; (def CX 1024)
-;; (def CY 1024)
+;; TERMINOLOGY
+;; - gene: a particular [numeric] value that is expressed somehow in the
+;; appearance of the resulting creature
+;; - genotype: a description of all the genes; a vector of gene definitions
+;; - gene definition (gdef): a hash describing the properties of a gene
+;; - genome: a vector of gene values, one for each gene in the genotype
+
 (def BIOMORPH-COUNT 9)
 (def CHILD-COUNT (dec BIOMORPH-COUNT))
-;; (def CXCELL (int (/ CX BIOMORPH-COUNT)))
-;; (def CYCELL (int (/ CY BIOMORPH-COUNT)))
+(def MUTATION-RATE 0.05)
+(def BASE-BRANCH-LEN 50)
 
-(def MIN-GENE 0)
-(def MAX-GENE 19)
-(def MAX-DEPTH 10)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Genotype Definition & Gene Manipulation
 
-; the order of directions we cycle through
-(def directions [:n :ne :e :se :s :sw :w :nw])
-; and the vectors they represent
-; (in canvas coords)
-(def dir-vectors
-  {:n  [ 0 -1]
-   :ne [ 1 -1]
-   :e  [ 1  0]
-   :se [ 1  1]
-   :s  [ 0  1]
-   :sw [-1  1]
-   :w  [-1  0]
-   :nw [-1 -1]
-   })
+; this genotype is lifted from http://www.annanardella.it/biomorph.html
+(def GENOTYPE
+  [{:name    :angle-front
+    :index    0
+    :default  45
+    :min      0
+    :max      360
+    ; angle of :ne/:nw strokes
+    }
+   {:name    :angle-rear
+    :index    1
+    :default  45
+    :min      0
+    :max      360
+    ; angle of :se/sw strokes
+    }
+   {:name    :elongation-front
+    :index   2
+    :default 1.0
+    :min     -9.0
+    :max     9.0
+    ; length factor for :ne/:nw strokes
+    }
+   {:name    :elongation-rear
+    :index   3
+    :default 1.0
+    :min     -9.0
+    :max     9.0
+    ; length factor for :se/sw strokes
+    }
+   {:name    :expansion-x
+    :index   4
+    :default 1.0
+    :min     -9.0
+    :max     9.0
+    ; general width scale factor
+    }
+   {:name    :expansion-y
+    :index   5
+    :default 1.0
+    :min     -9.0
+    :max     9.0
+    ; general height scale factor
+    }
+   {:name    :iterations
+    :index   6
+    :default 2
+    :min     0
+    :max     9
+    ; count of branchings, where 0 is Y-shaped
+    }
+   {:name    :gradient
+    :index   7
+    :default 2
+    :min     0
+    :max     1.5
+    ; length factor applied with each successive iteration
+    }
+   {:name    :color
+    :index   8
+    :default 180
+    :min     0
+    :max     360
+    ; hue of creature
+    }
+   ; maybe also
+   ; :segments
+   ; :segment-gradient
+   ; :symmetry
+   ; :drawing-primitive
+   ]
+  )
 
-;; there's probably a better way to do this
-;; but i was relying on a JVMism (.indexOf) previously
-(defn index-of [coll item]
-  (loop [idx 0, c coll]
-    (if-not (empty? c)
-      (if (= item (first c))
-        idx
-        (recur (inc idx) (rest c)))
-      -1)))
+(defn default-genome []
+  (mapv :default GENOTYPE))
 
-
-; make a 45 degree right turn
-; based on :left or :right
-(defn turn-direction [dir leftright]
-  (let [idx (index-of directions dir)
-        op  (if (= leftright :left) dec inc)
-        ]
-    (if-not (= idx -1)
-      (nth directions (mod (op idx) (count directions)))
-      (throw (js/Error. (str dir " is not a valid direction.")))
-      )))
-
-
-
-;; he uses the following genome
-;; newgenes = [];
-;; newgenes[0] = rand(); // depth
-;; newgenes[1] = rand(); // x-scale levels 3, 6, 9
-;; newgenes[2] = rand(); // x-scale levels 1, 4, 7
-;; newgenes[3] = rand(); // x-scale levels 2, 5, 8
-;; newgenes[4] = rand(); // y-scale levels 3, 6, 9
-;; newgenes[5] = rand(); // y-scale levels 1, 4, 7
-;; newgenes[6] = rand(); // y-scale levels 2, 5, 8
-;; newgenes[7] = rand(); // red
-;; newgenes[8] = rand(); // green
-;; newgenes[9] = rand(); // blue
-;; newgenes[10] = rand(); // width
-
-(def GENES
-  [:depth
-   :xscale369
-   :xscale147
-   :xscale258
-   :yscale369
-   :yscale147
-   :yscale258
-   :red           ; what about hue here instead?
-   :green
-   :blue
-   :width
-   ])
-; other ideas:
-; segmentation,
-; segment gradient,
-; symmetries
-; drawing primitive (line, ellipse, rect, filled/empty variants)
-;
-; see also http://www.annanardella.it/biomorph.html
-; http://www.phy.syr.edu/courses/mirror/biomorph/
-
-; current genome sucks
-; all the creatures look basically the same
-; maybe try adopting the genome from
-;     http://www.annanardella.it/biomorph.html
-
-
-(defn gene-index [gene-id]
-  (let [idx (index-of GENES gene-id)]
-    (if-not (= -1 idx)
-      idx
-      (throw (js/Error. (str gene-id " is not a valid gene id!")))
-      )))
-
-(defn get-gene [genome gene-id]
-  (get genome (gene-index gene-id)))
+(defn random-gene-value [{:keys [min max]}]
+  (+ min (rand (- max min))))
 
 (defn random-genome []
-  (vec (repeatedly (count GENES) #(+ MIN-GENE (rand-int MAX-GENE)))))
+  (mapv random-gene-value GENOTYPE)
+  )
 
 (comment
+  (default-genome)
   (random-genome)
   )
 
-(defn length-genes-for-depth
-  "returns a pair of gene values coding for length at the specified depth"
-  [genome depth]
-  (let [xidx (+ (gene-index :xscale369) (mod depth 3))]
-    [(get genome xidx)
-     (get genome (+ 3 xidx))]))
+; TODO: consider improving performance by not doing O(n) lookups
+; could scan GENOTYPE and build a hash (gene-name -> index)
+; (but oh well, n is always small here)
+(defn get-gene-index
+  "gene-name -> ordinal position in genome vector, else nil"
+  [gene-name]
+  (index-of-by (fn [{:keys [name]}]
+                 (= name gene-name))
+               GENOTYPE))
 
-(defn color-for-depth
-  "calculate the color of this branch based on both the genome and the branch depth"
-  [genome depth]
-  ; TODO impl this for real
-  (nth (cycle [[10 10 240]
-               [200 100 10]
-               [10 200 10]
-               [200 50 50]
-               [200 200 10]
-               ])
-       depth))
+(defn get-gene-def
+  "gene-name -> gdef, else nil"
+  [gene-name]
+  (get GENOTYPE (get-gene-index gene-name)))
+
+(defn get-gene
+  "retrieve a gene value from the supplied genome given a gene name.
+  returns nil if not found."
+  [genome gene-name]
+  (get genome (get-gene-index gene-name)))
+
 
 (comment
-  (def mygenome [0 1 2 3 4 5 6 7 8 9 10])
-  (def mygenome [1 1 1 1 1 1 1 1 1 1 1])
-  ; example taken from the javascript debugger
-  (def mygenome [0, 3, 20, 15, 4, 1, 16, 17, 7, 17, 3])
-  (get-gene mygenome :depth)
+  (get-gene (default-genome) :color)
+  (get-gene (default-genome) :iterations)
+  (get-gene (default-genome) :angle-front)
+  (get-gene (default-genome) :elongation-front)
 
-  (map #(length-genes-for-depth mygenome %1) (range 10))
+  (index-of-by odd? [2 4 6 8 9 4])
   )
 
 
-; i guess cljs doesn't have this
-(defn double [x] x)
 
-(defn genome-depth [genome]
-  (mod (int (get-gene genome :depth)) MAX-DEPTH))
+(defn mutate-gene
+  "given a gene definition and gene value, randomly increase or decrease it
+  based on the mutation rate"
+  [{:keys [min max]} gval]
+  (let [variance  (* (- max min)
+                     MUTATION-RATE
+                     (rand-nth [-1 1])) ]
+    (clamp (+ gval variance) min max)))
 
-
-(defn calc-branch-vector [genome depth dir]
-  (let [max-branch-len  200 ;; (Math/floor (/ CXCELL 2 8))
-        [lx ly]         (length-genes-for-depth genome depth)
-        [dx dy]         (dir-vectors dir) ]
-    ;; var i = x + Math.floor( xoffset*( genes[xGene] * 2579 ) % maxSegmentLen );
-    ;; var j = y + Math.floor( yoffset*( genes[yGene] * 5051 ) % maxSegmentLen );
-    ;; [(Math/floor (mod (* lx dx 2579) max-branch-len))
-    ;;  (Math/floor (mod (* ly dy 5051) max-branch-len))]
-
-    (mapv #(Math/floor (double %))
-          [(* lx dx (/ max-branch-len MAX-GENE ))
-           (* ly dy (/ max-branch-len MAX-GENE )) ])
-    ;; [(* dx 100) (* dy 100)]
-    ))
-
-
-; ensure a gene does not go out of bounds
-; (or should genes wrap around?)
-(defn saturate-gene [gene]
-  (max MIN-GENE (min MAX-GENE gene)))
-
-; pick a random gene and give it +/- 1
+; pick a random gene and give it a nudge
 ; this does not ensure uniqueness...
 ; could pull from a lazy seq into a set
 ; until it's of a certain size...
 ; could deterministically vary the genes...
 (defn mutate-genome
   [genome]
-  (let [idx    (rand-int (count genome))
-        newval (+ (get genome idx) (rand-nth [-1 1])) ]
-      (assoc genome idx (saturate-gene newval))))
+  (let [idx (rand-int (count genome)) ]
+    (assoc genome
+           idx
+           (mutate-gene (get GENOTYPE idx)
+                        (get genome idx)))))
+
 
 (defn make-children [parent-genome]
   (for [_ (range CHILD-COUNT)]
@@ -194,14 +178,105 @@
       (recur (conj children (mutate-genome parent-genome)))
       (vec children))))
 
-(comment
 
-  (mutate-genome [1, 1 1 1, 1 1 1, 1 1 1])
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Phenotype Expression Support
 
-  (mutate-genome [MAX-GENE, MAX-GENE MAX-GENE MAX-GENE, MAX-GENE MAX-GENE MAX-GENE, MAX-GENE MAX-GENE MAX-GENE])
+; so other modules don't have to care about gene names
+(defn get-genome-iterations [genome]
+  (get-gene genome :iterations))
 
-  (make-children [1, 1 1 1, 1 1 1, 1 1 1])
-  (make-children-unique [1, 1 1 1, 1 1 1, 1 1 1])
+(defn color-for-depth
+  "calculate the color of this branch based on both the genome and the branch depth"
+  [genome depth]
+  ; TODO impl this for real
+  ; that is, keeping the creature's hue,
+  ; but reduce lightness or value or something
+  (nth (cycle [[10 10 240]
+               [200 100 10]
+               [10 200 10]
+               [200 50 50]
+               [200 200 10]
+               ])
+       depth))
 
-  )
+; ordering of directions we walk through
+(def DIRECTIONS [:n :ne :e :se :s :sw :w :nw])
+
+; move to the next or previous nominal direction based on :left or :right
+; that is, a 45 degree movement like :n -> ne
+(defn- turn-direction [dir leftright]
+  (let [idx (index-of DIRECTIONS dir)
+        op  (if (= leftright :left) dec inc) ]
+    (if idx
+      (nth DIRECTIONS (mod (op idx) (count DIRECTIONS)))
+      (throw (js/Error. (str dir " is not a valid direction.")))
+      )))
+
+
+; i guess cljs doesn't have this?
+(defn double [x] x)
+
+#_(defn calc-branch-vector [genome depth dir]
+  (let [max-branch-len  200 ;; (Math/floor (/ CXCELL 2 8))
+        [lx ly]         (length-genes-for-depth genome depth)
+        [dx dy]         (DIR-VECTORS dir) ]
+
+    ; TODO REWRITE ME
+    (mapv #(Math/floor (double %))
+          [(* lx dx (/ max-branch-len MAX-GENE ))
+           (* ly dy (/ max-branch-len MAX-GENE )) ])
+    ;; [(* dx 100) (* dy 100)]
+    ))
+
+; TODO? normalize angle to [0,360)
+; TODO: adjust for the fact that 90 degrees is actually downward in canvas coords
+(defn get-genetic-angle
+  "consult the genome to calculate an angle in degrees for the given nominal direction"
+  [genome dir]
+  (case dir
+    :n  90
+    :ne (-  90 (get-gene genome :angle-front))
+    :e  0
+    :se (+ 270 (get-gene genome :angle-rear))
+    :s  270
+    :sw (- 270 (get-gene genome :angle-rear))
+    :w  180
+    :nw (+  90 (get-gene genome :angle-front))
+    ))
+
+(defn get-genetic-elongation
+  "consult the geneome to find the elongation factor for this direction"
+  [genome dir]
+  (case dir
+    :ne (get-gene genome :elongation-front)
+    :nw (get-gene genome :elongation-front)
+    :se (get-gene genome :elongation-rear)
+    :sw (get-gene genome :elongation-rear)
+    1.0))
+
+(defn get-genetic-gradient
+  "get the cumulative gradient factor for a branch at this depth"
+  [genome depth]
+  ; TODO: probably needs adjustment
+  ; because we are really passing in depth-remain
+    ; (- (get-genome-iterations genome) depth)
+  ; and 0 -> one branching still
+  (Math/pow (get-gene genome :gradient)
+            depth))
+
+(defn calc-branch-vector
+  "reckon the vector required to make a branch in direction `dir`,
+  after `depth` iterations"
+  [genome depth dir]
+  (let [angle (get-genetic-angle genome dir)
+        elong (get-genetic-elongation genome dir)
+        grad  (get-genetic-gradient genome depth)
+        len   (* elong grad BASE-BRANCH-LEN) ]
+    [(angleDx angle len)
+     (angleDy angle len)]
+    ))
+
+; apply expansion here or just scale the canvas while drawing?
+
 
