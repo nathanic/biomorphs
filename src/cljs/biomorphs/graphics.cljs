@@ -34,26 +34,21 @@
         [x' y']   [(+ x bx) (+ y by)]
         [r g b]   (gen/color-for-depth genome depth-remain)
         ]
-    ;; (log "drawing subtree at depth" depth-remain)
+    ;; (log "drawing subtree at depth-remain" depth-remain)
     (when (pos? depth-remain)
       (-> ctx
-          ;; (println "draw-subtree depth-remain" depth-remain " line: " x y bx by)
-          ;; (m/stroke-style "green")
           (m/stroke-style (format-color [r g b]))
           (line' x y x' y')
           (draw-subtree [x' y'] genome (gen/turn-direction dir :left)  (dec depth-remain))
           (draw-subtree [x' y'] genome (gen/turn-direction dir :right) (dec depth-remain))
-          )
-      ))
+          )))
   ctx)
 
 ; NB: we could potentially blow the stack
 ; but the JS impl I saw gets away with it.
 (defn draw-creature [{:keys [ctx genome pos]}]
   ;; (log "draw-creature" genome "at" pos)
-  ;; (println "BEGIN drawing genome")
   (draw-subtree ctx pos genome :n (inc (gen/get-genome-iterations genome)))
-  ;; (println "END drawing genome")
   )
 
 

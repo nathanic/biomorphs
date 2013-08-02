@@ -49,6 +49,8 @@
 ; IDEA: encode genome state in URL, for bookmarkable creatures
 ; and to allow back button
 
+; something about this click handler hangs the browser
+; it can't be gen/make-children or render
 (defn on-click-canvas
   [the-state evt]
   (log "canvas has been clicked offset " (offset-pos evt))
@@ -56,11 +58,14 @@
         pos                           (offset-pos evt)
         idx                           (gfx/pos-to-index-from-ctx ctx pos)
         new-parent                    (nth (cons parent children) idx) ]
+    ;; (log "updating state with new children")
     (swap! the-state
            assoc
            :parent   new-parent
            :children (gen/make-children new-parent)))
+  ;; (log "rendering the new state")
   (render @the-state)
+  (log "end of click handler")
   )
 
 
@@ -68,6 +73,7 @@
 
 ; called from an inline <script>
 (defn ^:export init [canvas]
+  (log "init start")
   (let [parent    (gen/default-genome)
         the-state (atom
                     {:parent   parent

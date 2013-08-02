@@ -24,6 +24,7 @@
 ;; Genotype Definition & Gene Manipulation
 
 ; this genotype is lifted from http://www.annanardella.it/biomorph.html
+; everything is implicitly :type :double unless specified otherwise
 (def GENOTYPE
   [{:name    :angle-front
     :index    0
@@ -72,6 +73,7 @@
     :default 2
     :min     0
     :max     9
+    :type    :int
     ; count of branchings, where 0 is Y-shaped
     }
    {:name    :gradient
@@ -143,11 +145,17 @@
   )
 
 
-(defn clamp-genome [genome]
-  (map (fn [{:keys [min max]} gene]
-         (clamp gene min max))
-       genome
-       GENOTYPE))
+(defn fixup-gene [gdef gval]
+  (let [fixer (case (:type gdef)
+                :int  Math/floor
+                identity
+                )]
+    (fixer (clamp gval (:min gdef) (:max gdef)))))
+
+(defn fixup-genome [genome]
+  (map fixup-gene
+       GENOTYPE
+       genome))
 
 (defn mutate-gene
   "given a gene definition and gene value, randomly increase or decrease it
@@ -188,8 +196,9 @@
 ;; Phenotype Expression Support
 
 ; so other modules don't have to care about gene names
+; also: rounding gets around an infinite loop bug
 (defn get-genome-iterations [genome]
-  (get-gene genome :iterations))
+  (Math/round (get-gene genome :iterations)))
 
 (defn color-for-depth
   "calculate the color of this branch based on both the genome and the branch depth"
@@ -264,8 +273,8 @@
   "get the cumulative gradient factor for a branch at this depth"
   [genome depth-remain]
   ; TODO: probably needs adjustment
-  ; because we are really passing in depth-remain
-  ; and 0 -> one branching still
+  ; 0 iterations -> still one branching
+  ; also i don't like writing in terms of depth-remain...
   (Math/pow (get-gene genome :gradient)
             (- (get-genome-iterations genome) depth-remain)))
 
