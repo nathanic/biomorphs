@@ -48,11 +48,21 @@
 ; but the JS impl I saw gets away with it.
 (defn draw-creature [{:keys [ctx genome pos]}]
   ;; (log "draw-creature" genome "at" pos)
-  (draw-subtree ctx pos genome :n (inc (gen/get-genome-iterations genome)))
-  )
+  (let [[x y] pos]  
+    (-> ctx
+        (m/save)
+        (m/translate x y)
+        (m/rotate Math/PI)
+        (m/translate (- x) (- y))
+        (draw-subtree pos genome :n (inc (gen/get-genome-iterations genome)))
+        (m/restore)
+        ))
+  ctx)
 
 
 (comment
+  (in-ns 'biomorphs.graphics)
+  (in-ns 'biomorphs.biomorphs)
   (defn all-creatures
     "return a seq of creatures, with the parent in the middle of the children"
     [parent children]

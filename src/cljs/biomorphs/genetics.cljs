@@ -17,6 +17,7 @@
 
 (def BIOMORPH-COUNT 9)
 (def CHILD-COUNT (dec BIOMORPH-COUNT))
+;; (def MUTATION-RATE 0.10)
 (def MUTATION-RATE 0.05)
 (def BASE-BRANCH-LEN 30)
 
@@ -73,7 +74,8 @@
     :default 2
     :min     0
     :max     9
-    :type    :int
+    ;; :type    :int
+    :mutation-rate 0.2
     ; count of branchings, where 0 is Y-shaped
     }
    {:name    :gradient
@@ -159,10 +161,10 @@
 
 (defn mutate-gene
   "given a gene definition and gene value, randomly increase or decrease it
-  based on the mutation rate"
-  [{:keys [min max]} gval]
+  based on its mutation rate (or the global default MUTATION-RATE)"
+  [{:keys [min max mutation-rate]} gval]
   (let [variance  (* (- max min)
-                     MUTATION-RATE
+                     (or mutation-rate MUTATION-RATE)
                      (rand-nth [-1 1])) ]
     (clamp (+ gval variance) min max)))
 
