@@ -47,7 +47,10 @@
    (.-offsetY evt)])
 
 ; IDEA: encode genome state in URL, for bookmarkable creatures
-; and to allow back button
+; and to allow back button 
+; or just pushState() and stash our state object
+; that way we can at least go back
+; it would also be cool to support middle-click to open a new tab at the desired state
 
 ; something about this click handler hangs the browser
 ; it can't be gen/make-children or render
@@ -98,32 +101,71 @@
 (defn ^:export debug-single-biomorph [canvas genome]
   (let [ctx     (m/get-context canvas "2d")
         [cx cy] (gfx/canvas-dims ctx)
-        genome  (or genome (gen/default-genome))
+        genome  (or genome 
+                    [65 25 1 1 1 1 9 0.9 180]
+                    #_(gen/default-genome))
         ]
     (gfx/clear-background ctx)
     (m/stroke-style ctx "red")
     (m/stroke-rect ctx {:x 0, :y 0, :w cx, :h cy})
-    (gfx/draw-creature {:ctx    ctx
+    #_(gfx/draw-creature {:ctx    ctx
                         :genome genome
                         :pos    [(/ cx 2)
                                  (/ cy 2) ]
-                        })))
+                        })
+    (gfx/render-stream ctx [(/ cx 2) (/ cy 2)] genome)
+
+    ))
 
 (defn try-genome [genome]
   (debug-single-biomorph (dom/getElementByClass "biomorphs") genome))
 
+
 (comment
+  (in-ns 'biomorphs.biomorphs)
   (map :name gen/GENOTYPE)
   (try-genome [45 45 1 1 1 1 3 0.9 180])
-  (try-genome [45 45 1 1 1 1 4 0.9 180])
-  (try-genome [45 45 2 1 1 1 2 0.8 180])
+  (try-genome [120 120 1 4 1 1 9 0.9 180])
+  (try-genome [45 45 2 1 1 1 9 0.8 180])
   (try-genome [45 45 2 1 1 1 2 1.5 180])
   (try-genome [-80 45 -4 2 1 1 6 0.9 180])
   (try-genome [90 45 1 1 1 1 2 2 180])
-  (try-genome [65 25 1 1 1 1 9 0.9 180])
-  (try-genome [59 45 1 1 1 1 2 2 180])
-  )
 
+  (try-genome [65 25 1 2 3 1 9 0.9 180])
+
+  (try-genome [59 45 1 1 1 1 2 2 180])
+
+  (ev/listen js/window "click" (fn [] (try-genome [65 25 1 2 3 1 9 0.9 180])))
+
+  ; let's get some numbers, even if they're kinda shitty
+  ; ... oh, i could have used (time)
+  (defn cheesey-benchmark [f]
+    (let [start   (.getTime (js/Date.))
+          result  (f)
+          end     (.getTime (js/Date.))
+          elapsed (- end start)]
+      {:result result, :elapsed elapsed}))
+
+  ; 1575 ms in chrome to generate 20 creatures of complexity 9
+  ; 5750 ms in firefox!
+  ; fiddling with JIT settings didn't help (disabling JIT hurt very slightly)
+  (/ 5760. 1565) ; 3.7
+  (:elapsed
+    (cheesey-benchmark
+      (fn []
+        (dotimes [_ 20] (doall (gen/stream-creature [120 120 1 4 1 1 9 0.9 180])))
+        )))
+
+  ; 2242 ms in chrome to draw 20 creatures of complexity 9
+  ; 8804 ms in firefox.  what the crap.
+  (/ 8804. 2242) ; 3.9, so canvas code is also proportionally worse
+  (:elapsed
+    (cheesey-benchmark
+      (fn []
+        (dotimes [_ 20] (try-genome [120 120 1 4 1 1 9 0.9 180]))
+        )))
+
+  )
 (comment
   (do (require 'cemerick.piggieback) (cemerick.piggieback/cljs-repl))
   (js/alert "yoyo")

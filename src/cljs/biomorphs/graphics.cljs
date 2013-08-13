@@ -22,33 +22,42 @@
 
 ;;; there must be a better way than string concatenation
 ;;; but this is how mondrian handles it...
-(defn format-color [[r g b a]]
-  (if (nil? a)
-    (str "rgb(" r "," g "," b ")")
-    (str "rgba(" r "," g "," b ",a)")
-    ))
+(defn rgb [r g b]
+  (str "rgb(" r "," g "," b ")"))
+
+(defn rgba [r g b a]
+  (str "rgba(" r "," g "," b "," a ")"))
+
+(defn- to-percent [x]
+  (str (* 100.0 x) "%"))
+
+(defn hsl [h s l]
+  (str "hsl(" h "," (to-percent s) "," (to-percent l) ")"))
+
+(defn hsla [h s l a]
+  (str "hsla(" h "," (to-percent s) "," (to-percent l) "," a ")"))
 
 (defn draw-subtree
   [ctx [x y] genome dir depth-remain]
-  (let [[bx by]   (gen/calc-branch-vector genome depth-remain dir)
-        [x' y']   [(+ x bx) (+ y by)]
-        [r g b]   (gen/color-for-depth genome depth-remain)
-        ]
-    ;; (log "drawing subtree at depth-remain" depth-remain)
-    (when (pos? depth-remain)
+  (when (pos? depth-remain)
+    (let [[bx by]   (gen/calc-branch-vector genome depth-remain dir)
+          [x' y']   [(+ x bx) (+ y by)]
+          [r g b]   (gen/color-for-depth genome depth-remain)
+          ]
+      ;; (log "drawing subtree at depth-remain" depth-remain)
       (-> ctx
-          (m/stroke-style (format-color [r g b]))
+          (m/stroke-style (rgb r g b))
           (line' x y x' y')
           (draw-subtree [x' y'] genome (gen/turn-direction dir :left)  (dec depth-remain))
           (draw-subtree [x' y'] genome (gen/turn-direction dir :right) (dec depth-remain))
           )))
-  ctx)
+    ctx)
 
 ; NB: we could potentially blow the stack
 ; but the JS impl I saw gets away with it.
 (defn draw-creature [{:keys [ctx genome pos]}]
   ;; (log "draw-creature" genome "at" pos)
-  (let [[x y] pos]  
+  (let [[x y] pos]
     (-> ctx
         (m/save)
         (m/translate x y)
@@ -57,6 +66,25 @@
         (draw-subtree pos genome :n (inc (gen/get-genome-iterations genome)))
         (m/restore)
         ))
+  ctx)
+
+; experimental streaming version
+(defn render-stream [ctx [x y] genome]
+  (-> ctx
+      (m/save)
+      (m/translate x y)
+      (m/rotate Math/PI)
+      )
+  (doseq [{:keys [x y x' y' depth]} (gen/stream-creature genome) ]
+    (-> ctx
+        (m/begin-path)
+        ;; (m/stroke-style (apply rgb (gen/color-for-depth genome depth)))
+        (m/stroke-style (apply hsla (gen/color-for-depth' genome depth)))
+        (m/move-tokx y)
+        (m/line-to x' y')
+        (m/stroke)
+        ))
+  (m/restore ctx)
   ctx)
 
 

@@ -100,6 +100,26 @@
    ]
   )
 
+; lookup table in an attempt to optimize speed
+(def GENOTYPE-LUT
+  (reduce (fn [lut gene]
+            (assoc lut (:name gene) gene))
+          GENOTYPE))
+
+(comment
+  ; could build :index automatically...
+  (map-indexed
+    (fn [idx gdef]
+      (assoc gdef :index idx))
+    GENOTYPE)
+  )
+
+(defn get-gene-def [gene-name]
+  (get GENOTYPE-LUT gene-name))
+
+(defn get-gene [genome gene-name]
+  (get genome (:index (get GENOTYPE-LUT gene-name))))
+
 (defn default-genome []
   (mapv :default GENOTYPE))
 
@@ -118,6 +138,8 @@
 ; TODO: consider improving performance by not doing O(n) lookups
 ; could scan GENOTYPE and build a hash (gene-name -> index)
 ; (but oh well, n is always small here)
+; UPDATE: profiling suggests we spend a lot of time doing this
+; so it'd be worth speeding up
 (defn get-gene-index
   "gene-name -> ordinal position in genome vector, else nil"
   [gene-name]
@@ -125,12 +147,12 @@
                  (= name gene-name))
                GENOTYPE))
 
-(defn get-gene-def
+#_(defn get-gene-def
   "gene-name -> gdef, else nil"
   [gene-name]
   (get GENOTYPE (get-gene-index gene-name)))
 
-(defn get-gene
+#_(defn get-gene
   "retrieve a gene value from the supplied genome given a gene name.
   returns nil if not found."
   [genome gene-name]
@@ -202,6 +224,16 @@
 (defn get-genome-iterations [genome]
   (Math/round (get-gene genome :iterations)))
 
+(defn get-genetic-gradient
+  "get the cumulative gradient factor for a branch at this depth"
+  [genome depth-remain]
+  ; TODO: probably needs adjustment
+  ; 0 iterations -> still one branching
+  ; also i don't like writing in terms of depth-remain...
+  (Math/pow (get-gene genome :gradient)
+            (- (get-genome-iterations genome) depth-remain)))
+
+
 (defn color-for-depth
   "calculate the color of this branch based on both the genome and the branch depth"
   [genome depth]
@@ -215,6 +247,15 @@
                [200 200 10]
                ])
        depth))
+
+; (in-ns 'biomorphs.genetics)
+; this isn't coming out dramatic enough
+(defn color-for-depth'
+  "the color will be the hue gene, with lightness and alpha affected by the gradient gene"
+  [genome depth-remain]
+  (let [grad (get-genetic-gradient genome depth-remain)]
+    [(* grad (get-gene genome :hue)) (* 1.0) (* grad 0.5) (* 1.0)]
+    ))
 
 ; ordering of directions we walk through
 (def DIRECTIONS [:n :ne :e :se :s :sw :w :nw])
@@ -271,15 +312,6 @@
     :sw (get-gene genome :elongation-rear)
     1.0))
 
-(defn get-genetic-gradient
-  "get the cumulative gradient factor for a branch at this depth"
-  [genome depth-remain]
-  ; TODO: probably needs adjustment
-  ; 0 iterations -> still one branching
-  ; also i don't like writing in terms of depth-remain...
-  (Math/pow (get-gene genome :gradient)
-            (- (get-genome-iterations genome) depth-remain)))
-
 (defn calc-branch-vector
   "reckon the vector required to make a branch in direction `dir`,
   after `depth` iterations"
@@ -294,4 +326,47 @@
 
 ; apply expansion here or just scale the canvas while drawing?
 
+; also re: scaling, we easily hit creatures too big to fit in their cells
+; the nardella version seems to compensate the scale genes to try to keep things fitting
+; we could basically walk through the drawing algorithm but only save the extrema points...
+
+; might be interesting to change the drawing algorithm such that the genetics module
+; generates a lazy seq of line segments, and the drawing algorithm just interprets that...
+
+; maybe call it subtree-seq
+(defn stream-subtree [genome [x y] dir depth-remain]
+  (when (pos? depth-remain)
+    (let [[dx dy] (calc-branch-vector genome depth-remain dir)
+          [x' y'] [(+ x dx) (+ y dy)]
+          segment {:x x, :y y, :x' x', :y' y', :depth depth-remain}
+          ]
+      (cons segment
+            (concat (lazy-seq (stream-subtree genome [x' y'] (turn-direction dir :left) (dec depth-remain)))
+                    (lazy-seq (stream-subtree genome [x' y'] (turn-direction dir :right) (dec depth-remain))))))))
+
+; maybe creature-seq
+(defn stream-creature [genome]
+  (stream-subtree genome [0 0] :n (inc (get-genome-iterations genome))))
+
+(comment
+  (in-ns 'biomorphs.genetics)
+  (stream-creature [45 45 1 1 1 1 3 0.9 180])
+
+  )
+
+
+; okay, armed with our streaming creature description,
+; let's see how hard it is to measure it
+; it's a monoid if you squint (ignoring map vs vector)
+(defn- extreme-coords
+  [[xmin xmax ymin ymax] {:keys [x y x' y']}]
+  [(min xmin x x')
+   (max xmax x x')
+   (min ymin y y')
+   (max ymax y y') ])
+
+(defn measure-creature [genome]
+  (reduce extreme-coords [0 0 0 0] (stream-creature genome)))
+
+; notbad.jpg
 
