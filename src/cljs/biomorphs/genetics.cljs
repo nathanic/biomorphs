@@ -98,6 +98,8 @@
    ; :segment-gradient
    ; :symmetry
    ; :drawing-primitive
+   ; dots or other shapes at some or all vertices?
+   ; perhaps only origin, or only terminals, or anywhere
    ]
   )
 
@@ -362,14 +364,26 @@
 ; let's see how hard it is to measure it
 ; it's a monoid if you squint (ignoring map vs vector)
 (defn- extreme-coords
-  [[xmin xmax ymin ymax] {:keys [x y x' y']}]
-  [(min xmin x x')
-   (max xmax x x')
-   (min ymin y y')
-   (max ymax y y') ])
+  [[xmin ymin, xmax ymax] {:keys [x0 y0, x1 y1]}]
+  [(min (or xmin x0) x0 x1)
+   (min (or ymin y0) y0 y1)
+   (max (or xmax x0) x0 x1)
+   (max (or ymax y0) y0 y1) ])
+;; NB: min and max seem to treat nil==0
 
-(defn measure-creature [genome]
-  (reduce extreme-coords [0 0 0 0] (stream-creature genome)))
+(defn measure-creature [creature]
+  (reduce extreme-coords [nil nil nil nil] creature))
 
-; notbad.jpg
+; NB these coords are in creature-space
+(defn creature-centroid [creature]
+  (let [[x0 y0, x1 y1] (measure-creature creature)]
+    [(* 0.5 (+ x0 x1))
+     (* 0.5 (+ y0 y1))]))
 
+(comment
+
+  (def critter [ {:x0 -10, :y0 5, :x1 10, :y1 15} ])
+
+  (measure-creature critter)
+  (creature-centroid critter)
+  )

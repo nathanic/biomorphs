@@ -37,38 +37,6 @@
 (defn hsla [h s l a]
   (str "hsla(" h "," (to-percent s) "," (to-percent l) "," a ")"))
 
-(defn draw-subtree
-  [ctx [x y] genome dir depth-remain]
-  (when (pos? depth-remain)
-    (let [[bx by]   (gen/calc-branch-vector genome depth-remain dir)
-          [x' y']   [(+ x bx) (+ y by)]
-          [r g b]   (gen/color-for-depth genome depth-remain)
-          ]
-      ;; (log "drawing subtree at depth-remain" depth-remain)
-      (-> ctx
-          (m/stroke-style (rgb r g b))
-          (line' x y x' y')
-          (draw-subtree [x' y'] genome (gen/turn-direction dir :left)  (dec depth-remain))
-          (draw-subtree [x' y'] genome (gen/turn-direction dir :right) (dec depth-remain))
-          )))
-    ctx)
-
-; NB: we could potentially blow the stack
-; but the JS impl I saw gets away with it.
-(defn draw-creature-old [{:keys [ctx genome pos]}]
-  ;; (log "draw-creature" genome "at" pos)
-  (let [[x y] pos]
-    (-> ctx
-        (m/save)
-        (m/translate x y)
-        (m/rotate Math/PI)
-        (m/translate (- x) (- y))
-        (draw-subtree pos genome :n (inc (gen/get-genome-iterations genome)))
-        (m/restore)
-        ))
-  ctx)
-
-; experimental streaming version
 (defn render-creature [ctx x y creature]
   (-> ctx
       (m/save)
@@ -81,8 +49,18 @@
         (m/stroke-style (apply hsla color))
         (m/move-to x0 y0)
         (m/line-to x1 y1)
-        (m/stroke)
-        ))
+        (m/stroke))
+    ; testing: draw a blue circle at the calculated centroid
+    (let [[center-x center-y] (gen/creature-centroid creature)]
+      (-> ctx
+          (m/fill-style "red")
+          (m/circle {:x 0, :y 0, :r 5})
+          (m/fill-style "blue")
+          (m/circle {:x center-x, :y center-y, :r 10})
+          ;; (m/circle {:x 100, :y 100, :r 10})
+          ))
+    )
+
   (m/restore ctx)
   ctx)
 
@@ -168,30 +146,10 @@
       (m/line-to x (+ cy y))
       (m/line-to x y)
       (m/stroke-style "red")
-      (m/stroke)
-      )
+      (m/stroke))
   ctx)
 
 ; TODO: masked drawing so we don't overlap into another cell
-(defn draw-creatures-old
-  [{:keys [ctx parent children]}]
-  (let [width           (.-width (.-canvas ctx))
-        [cxcell cycell] (cell-dims ctx)
-        creatures       (cons parent children) ]
-    (doseq [[n creature] (map-indexed vector creatures)]
-      ;; (log "drawing creature" n "(" creature ") at" (pos-from-index n width) "width: " width)
-      (let [[x y] (pos-from-index n width cxcell cycell)]
-        (bounding-box ctx x y cxcell cycell)
-        (draw-creature {:ctx ctx
-                        :genome creature
-                        ; TODO HACKISH: need a better way of scaling the creatures
-                        ; and aligning them in their cells
-                        :pos [(+ x (/ cxcell 2))
-                              (+ y (* 3 (/ cycell 4)))
-                              ]}))
-      )))
-
-
 (defn draw-creatures
   [{:keys [ctx genomes]}]
   (let [width           (.-width (.-canvas ctx))
@@ -201,9 +159,9 @@
       (let [[x y] (pos-from-index n width cxcell cycell)]
         (bounding-box ctx x y cxcell cycell)
         (render-creature ctx
-                       (+ x (/ cxcell 2))
-                       (+ y (* 3 (/ cycell 4)))
-                       creature)))))
+                         (+ x (/ cxcell 2))
+                         (+ y (/ cycell 2))
+                         creature)))))
 
 
 (defn clear-background [ctx]
