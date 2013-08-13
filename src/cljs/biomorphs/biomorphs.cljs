@@ -57,30 +57,23 @@
 (defn on-click-canvas
   [the-state evt]
   (log "canvas has been clicked offset " (offset-pos evt))
-  (let [{:keys [ctx parent children]} @the-state
-        pos                           (offset-pos evt)
-        idx                           (gfx/pos-to-index-from-ctx ctx pos)
-        new-parent                    (nth (cons parent children) idx) ]
-    ;; (log "updating state with new children")
+  (let [{:keys [ctx genomes]}   @the-state
+        pos                     (offset-pos evt)
+        idx                     (gfx/pos-to-index-from-ctx ctx pos)
+        new-parent              (nth genomes idx) ]
     (swap! the-state
-           assoc
-           :parent   new-parent
-           :children (gen/make-children new-parent)))
-  ;; (log "rendering the new state")
+           assoc :genomes (cons new-parent (gen/make-children new-parent))))
   (render @the-state)
   (log "end of click handler")
   )
 
-
-; TODO? just have :genomes and the parent is (first (:genomes state))
 
 ; called from an inline <script>
 (defn ^:export init [canvas]
   (log "init start")
   (let [parent    (gen/default-genome)
         the-state (atom
-                    {:parent   parent
-                     :children (gen/make-children parent)
+                    {:genomes  (cons parent (gen/make-children parent))
                      :ctx      (m/get-context canvas "2d")
                      })
         ]
@@ -113,7 +106,7 @@
                         :pos    [(/ cx 2)
                                  (/ cy 2) ]
                         })
-    (gfx/render-stream ctx [(/ cx 2) (/ cy 2)] genome)
+    (gfx/render-creature ctx (/ cx 2) (/ cy 2) (gen/stream-creature genome))
 
     ))
 

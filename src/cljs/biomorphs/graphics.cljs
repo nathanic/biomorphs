@@ -55,7 +55,7 @@
 
 ; NB: we could potentially blow the stack
 ; but the JS impl I saw gets away with it.
-(defn draw-creature [{:keys [ctx genome pos]}]
+(defn draw-creature-old [{:keys [ctx genome pos]}]
   ;; (log "draw-creature" genome "at" pos)
   (let [[x y] pos]
     (-> ctx
@@ -69,19 +69,18 @@
   ctx)
 
 ; experimental streaming version
-(defn render-stream [ctx [x y] genome]
+(defn render-creature [ctx x y creature]
   (-> ctx
       (m/save)
       (m/translate x y)
       (m/rotate Math/PI)
       )
-  (doseq [{:keys [x y x' y' depth]} (gen/stream-creature genome) ]
+  (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
     (-> ctx
         (m/begin-path)
-        ;; (m/stroke-style (apply rgb (gen/color-for-depth genome depth)))
-        (m/stroke-style (apply hsla (gen/color-for-depth' genome depth)))
-        (m/move-tokx y)
-        (m/line-to x' y')
+        (m/stroke-style (apply hsla color))
+        (m/move-to x0 y0)
+        (m/line-to x1 y1)
         (m/stroke)
         ))
   (m/restore ctx)
@@ -174,7 +173,7 @@
   ctx)
 
 ; TODO: masked drawing so we don't overlap into another cell
-(defn draw-creatures
+(defn draw-creatures-old
   [{:keys [ctx parent children]}]
   (let [width           (.-width (.-canvas ctx))
         [cxcell cycell] (cell-dims ctx)
@@ -191,6 +190,20 @@
                               (+ y (* 3 (/ cycell 4)))
                               ]}))
       )))
+
+
+(defn draw-creatures
+  [{:keys [ctx genomes]}]
+  (let [width           (.-width (.-canvas ctx))
+        [cxcell cycell] (cell-dims ctx)
+        creatures       (map gen/stream-creature genomes) ]
+    (doseq [[n creature] (map-indexed vector creatures)]
+      (let [[x y] (pos-from-index n width cxcell cycell)]
+        (bounding-box ctx x y cxcell cycell)
+        (render-creature ctx
+                       (+ x (/ cxcell 2))
+                       (+ y (* 3 (/ cycell 4)))
+                       creature)))))
 
 
 (defn clear-background [ctx]

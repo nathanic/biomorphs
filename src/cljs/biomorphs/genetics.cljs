@@ -14,6 +14,7 @@
 ;; - genotype: a description of all the genes; a vector of gene definitions
 ;; - gene definition (gdef): a hash describing the properties of a gene
 ;; - genome: a vector of gene values, one for each gene in the genotype
+;; - creature: a seq of line segment descriptors representing the phenotype
 
 (def BIOMORPH-COUNT 9)
 (def CHILD-COUNT (dec BIOMORPH-COUNT))
@@ -338,7 +339,9 @@
   (when (pos? depth-remain)
     (let [[dx dy] (calc-branch-vector genome depth-remain dir)
           [x' y'] [(+ x dx) (+ y dy)]
-          segment {:x x, :y y, :x' x', :y' y', :depth depth-remain}
+          segment {:x0 x, :y0 y, :x1 x', :y1 y',
+                   :color (color-for-depth' genome depth-remain)
+                   }
           ]
       (cons segment
             (concat (lazy-seq (stream-subtree genome [x' y'] (turn-direction dir :left) (dec depth-remain)))
