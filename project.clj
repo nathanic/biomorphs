@@ -30,7 +30,11 @@
             [lein-ring "0.8.3"]]
   :hooks [leiningen.cljsbuild]
   :repl-options {:timeout 240000
-                 :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+                 :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
+                 ; why don't these work?
+                 ;; :init-ns biomorphs.server
+                 ;; :init (biomorphs.server/browser-repl)
+                 }
 
   :source-paths ["src/clj"]
   :resource-paths ["resources" "target/resources"]

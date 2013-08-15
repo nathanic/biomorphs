@@ -7,53 +7,55 @@
             [goog.dom :as dom]
             ))
 
-;; plan for doing the evolution stuff
-;; multiple canvases or single canvas?
-;;  multiple canvases would simplify click handling
-;;  and clipping
-;;  have to do that myself otherwise
-;; when do we abandon mondrian?
-;;  it's convenient for testing drawing algorithms
-;;  but we don't really need an animation loop
-;;  probably not great with multiple canvi
-;;  though i guess we could have both
-;;  switch back to mondrian & a single genome when needed
-;;
-;; generate mutant descendents
-;; draw them all to canvi
-;; on canvas click:
-;;  make that genome the new parent
-;;  respawn mutants
-;;  could save the evo path for an animation or something
-;;
-;; would also be cool to indicate the genome values
+;; UI Ideas
+;; genome bar plot
+;; genome editor
+;; genome explorer view
+  ;; that is, panes for + and - for each gene
+  ;; for directed, non-random mutation
+;; more status information
+;; back button to revert state
+;; completely randomize genome set
 
-(comment ;; nmap ,e va(<c-c><c-c>
-
-  (browser-repl)
-  (in-ns 'biomorphs.biomorphs)
-
-  )
-
-
-(defn render
-  [{:keys [ctx] :as state}]
-  (gfx/clear-background ctx)
-  (gfx/draw-creatures state)
-  )
-
-(defn offset-pos [evt]
-  [(.-offsetX evt)
-   (.-offsetY evt)])
 
 ; IDEA: encode genome state in URL, for bookmarkable creatures
-; and to allow back button 
+; and to allow back button
 ; or just pushState() and stash our state object
 ; that way we can at least go back
 ; it would also be cool to support middle-click to open a new tab at the desired state
 
-; something about this click handler hangs the browser
-; it can't be gen/make-children or render
+(defn render
+  [state]
+  (gfx/clear-background (:ctx state))
+  (gfx/draw-creatures state))
+
+(defn offset-pos
+  [evt]
+  [(.-offsetX evt)
+   (.-offsetY evt)])
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; pushState support
+(defn serialize-state [state]
+  ; can't serialize canvas context
+  (pr-str (dissoc state :ctx)))
+
+(defn deserialize-state [ser-state]
+  (cljs.reader/read-string ser-state))
+
+; TODO: also do some kind of hash encoding for bookmarkability?
+(defn push-state [state]
+  (.pushState js/history (serialize-state state) "" nil))
+
+(defn on-popstate
+  [the-state evt]
+  (when (.-state evt)
+    (.log js/console "restoring state" (.-state evt))
+    (swap! the-state merge (deserialize-state (.-state evt)))
+    (render @the-state)))
+
+
+
 (defn on-click-canvas
   [the-state evt]
   (log "canvas has been clicked offset " (offset-pos evt))
@@ -64,9 +66,8 @@
     (swap! the-state
            assoc :genomes (cons new-parent (gen/make-children new-parent))))
   (render @the-state)
-  (log "end of click handler")
+  (push-state @the-state)
   )
-
 
 ; called from an inline <script>
 (defn ^:export init [canvas]
@@ -80,6 +81,7 @@
     (when (and js/document
                (.-getElementById js/document))
       (ev/listen canvas "click" (partial on-click-canvas the-state))
+      (ev/listen js/window "popstate" (partial on-popstate the-state))
       )
     ;; invoke first draw
     (render @the-state)
@@ -89,12 +91,11 @@
 
 
 
-
 ; temporary debug hooks, for use with single.html
 (defn ^:export debug-single-biomorph [canvas genome]
   (let [ctx     (m/get-context canvas "2d")
         [cx cy] (gfx/canvas-dims ctx)
-        genome  (or genome 
+        genome  (or genome
                     [65 25 1 1 1 1 9 0.9 180]
                     #_(gen/default-genome))
         ]
@@ -159,10 +160,4 @@
         )))
 
   )
-(comment
-  (do (require 'cemerick.piggieback) (cemerick.piggieback/cljs-repl))
-  (js/alert "yoyo")
-  (.log js/console "logging yo!")
-  (+ 2 2)
-  (stop-updating)
-  )
+

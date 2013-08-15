@@ -143,6 +143,9 @@
 ; (but oh well, n is always small here)
 ; UPDATE: profiling suggests we spend a lot of time doing this
 ; so it'd be worth speeding up
+; we don't *really* need a concept of ordinality with this new genome
+; could just do it as hash-maps from name -> gdef and name -> gene
+; i *think* small hash-maps are implemented as JS objects
 (defn get-gene-index
   "gene-name -> ordinal position in genome vector, else nil"
   [gene-name]
