@@ -38,30 +38,20 @@
   (str "hsla(" h "," (to-percent s) "," (to-percent l) "," a ")"))
 
 (defn render-creature [ctx x y creature]
-  (-> ctx
-      (m/save)
-      (m/translate x y)
-      (m/rotate Math/PI)
-      )
-  ; testing: draw a blue circle at the calculated centroid
   (let [[center-x center-y] (gen/creature-centroid creature)]
     (-> ctx
-        (m/fill-style "red")
-        (m/circle {:x 0, :y 0, :r 5})
-        (m/fill-style "blue")
-        (m/circle {:x center-x, :y center-y, :r 10})
-        ;; (m/circle {:x 100, :y 100, :r 10})
-        (m/translate (- center-x) (- center-y))
-        )
-    )
+        (m/save)
+        ; could probably combine the translations
+        (m/translate x y)
+        (m/rotate Math/PI)
+        (m/translate (- center-x) (- center-y))))
   (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
     (-> ctx
         (m/begin-path)
         (m/stroke-style (apply hsla color))
         (m/move-to x0 y0)
         (m/line-to x1 y1)
-        (m/stroke))
-    )
+        (m/stroke)))
   (m/restore ctx)
   ctx)
 
