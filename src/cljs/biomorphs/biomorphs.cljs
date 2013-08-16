@@ -17,6 +17,11 @@
 ;; back button to revert state
 ;; completely randomize genome set
 
+; would this benefit from core.async?
+
+; what about morphing the creatures between genomes?
+; could render several intermediate states interpolated between the old and new genomes
+
 
 ; IDEA: encode genome state in URL, for bookmarkable creatures
 ; and to allow back button
@@ -55,7 +60,6 @@
     (render @the-state)))
 
 
-
 (defn on-click-canvas
   [the-state evt]
   (log "canvas has been clicked offset " (offset-pos evt))
@@ -67,6 +71,16 @@
            assoc :genomes (cons new-parent (gen/make-children new-parent))))
   (render @the-state)
   (push-state @the-state)
+  )
+
+;; we'll make a button on the html and bind it to randomize all genomes
+(defn on-click-randomize [the-state evt]
+  (log "randomize button clicked")
+  (swap! the-state
+         update-in [:genomes]
+         (fn [gs] (map #(gen/random-genome) gs)))
+  (push-state @the-state)
+  (render @the-state)
   )
 
 ; called from an inline <script>
@@ -82,6 +96,9 @@
                (.-getElementById js/document))
       (ev/listen canvas "click" (partial on-click-canvas the-state))
       (ev/listen js/window "popstate" (partial on-popstate the-state))
+      (ev/listen (dom/getElement "randomize") 
+                 "click" 
+                 (partial on-click-randomize the-state))
       )
     ;; invoke first draw
     (render @the-state)
