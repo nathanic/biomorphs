@@ -133,6 +133,10 @@
   (mapv random-gene-value GENOTYPE)
   )
 
+(defn valid-genome? [genome]
+  (and (= (count genome) (count GENOTYPE))
+       (every? number? genome)))
+
 (comment
   (default-genome)
   (random-genome)
@@ -146,6 +150,7 @@
 ; we don't *really* need a concept of ordinality with this new genome
 ; could just do it as hash-maps from name -> gdef and name -> gene
 ; i *think* small hash-maps are implemented as JS objects
+; though we might need to define an order for succinct url hashes
 (defn get-gene-index
   "gene-name -> ordinal position in genome vector, else nil"
   [gene-name]
@@ -318,23 +323,32 @@
     :sw (get-gene genome :elongation-rear)
     1.0))
 
+(defn get-genetic-expansion
+  [genome]
+  [(get-gene genome :expansion-x)
+   (get-gene genome :expansion-y)])
+
 (defn calc-branch-vector
   "reckon the vector required to make a branch in direction `dir`,
   after `depth` iterations"
   [genome depth dir]
-  (let [angle (get-genetic-angle genome dir)
-        elong (get-genetic-elongation genome dir)
-        grad  (get-genetic-gradient genome depth)
-        len   (* elong grad BASE-BRANCH-LEN) ]
-    [(angleDx angle len)
-     (angleDy angle len)]
-    ))
+  (let [angle   (get-genetic-angle genome dir)
+        elong   (get-genetic-elongation genome dir)
+        grad    (get-genetic-gradient genome depth)
+        len     (* elong grad BASE-BRANCH-LEN) 
+        [ex ey] (get-genetic-expansion genome) ]
+    [(* ex (angleDx angle len))
+     (* ey (angleDy angle len))]))
 
 ; apply expansion here or just scale the canvas while drawing?
+; what *is* expansion?  just a coefficients on the branch vector components?
 
 ; also re: scaling, we easily hit creatures too big to fit in their cells
 ; the nardella version seems to compensate the scale genes to try to keep things fitting
 ; we could basically walk through the drawing algorithm but only save the extrema points...
+; UPDATE: doing measurement now, can definitely do this
+
+; so do we follow nardella and dynamically cap the expansion genes?
 
 ; might be interesting to change the drawing algorithm such that the genetics module
 ; generates a lazy seq of line segments, and the drawing algorithm just interprets that...
