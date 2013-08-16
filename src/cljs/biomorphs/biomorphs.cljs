@@ -131,6 +131,20 @@
 (defn try-genome [genome]
   (debug-single-biomorph (dom/getElementByClass "biomorphs") genome))
 
+#_(defn animate-genome [genome-from genome-to]
+  ; maybe a core.async/go block
+  ; calculate a stream of intermediate interpolated genomes
+  ; draw one
+  ; delay
+  ; draw next
+    ; what about requestAnimationFrame?
+
+  )
+; timeout version
+; set up a timeout
+  ; pop a genome
+  ; render it
+  ; set up next timeout with rest of genomes
 
 (comment
   (in-ns 'biomorphs.biomorphs)
@@ -175,6 +189,10 @@
       (fn []
         (dotimes [_ 20] (try-genome [120 120 1 4 1 1 9 0.9 180]))
         )))
+
+  (gen/valid-genome? [120 120 1 4 1 1 9 0.9 180])
+  (gen/get-genetic-expansion [120 120 1 4 2 3 9 0.9 180])
+
 
   )
 

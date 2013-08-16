@@ -1,6 +1,6 @@
 (ns biomorphs.genetics
   (:require [biomorphs.utils :refer [index-of index-of-by]]
-            [goog.math :refer [clamp angleDx angleDy]]
+            [goog.math :refer [clamp angleDx angleDy lerp]]
             )
   )
 
@@ -335,7 +335,7 @@
   (let [angle   (get-genetic-angle genome dir)
         elong   (get-genetic-elongation genome dir)
         grad    (get-genetic-gradient genome depth)
-        len     (* elong grad BASE-BRANCH-LEN) 
+        len     (* elong grad BASE-BRANCH-LEN)
         [ex ey] (get-genetic-expansion genome) ]
     [(* ex (angleDx angle len))
      (* ey (angleDy angle len))]))
@@ -404,3 +404,28 @@
   (measure-creature critter)
   (creature-centroid critter)
   )
+
+
+(defn interpolate-gene
+  [coeff a b]
+  (lerp a b coeff)
+  )
+
+(defn interpolate-genomes
+  "produce an interpolated intermediate genome between the given genomes
+  where coeff=0 means you get purely genome-a, and 1.0 gives you genome-b"
+  [genome-a genome-b coeff]
+  {:pre [(<= 0.0 coeff) (<= coeff 1.0)]}
+  (mapv (partial interpolate-gene coeff) genome-a genome-b))
+
+(defn interpolations
+  "returns a lazy seq of n interpolated genomes,
+  varying linearly from genome-a to genome-b"
+  [n genome-a genome-b]
+  (for [x (range (inc n))]
+    (interpolate-genomes genome-a genome-b (/ x n))))
+
+(comment
+  (interpolate-gene 1 10 20)
+  )
+; what about three.js and webgl?
