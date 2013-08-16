@@ -140,6 +140,11 @@
       (m/stroke))
   ctx)
 
+(defn clip-box  [ctx x y cx cy]
+  (m/begin-path ctx)
+  (.rect ctx x y cx cy)
+  (.clip ctx))
+
 ; TODO: masked drawing so we don't overlap into another cell
 (defn draw-creatures
   [{:keys [ctx genomes]}]
@@ -149,10 +154,14 @@
     (doseq [[n creature] (map-indexed vector creatures)]
       (let [[x y] (pos-from-index n width cxcell cycell)]
         (bounding-box ctx x y cxcell cycell)
+        (m/save ctx)
+        (clip-box ctx x y cxcell cycell)
         (render-creature ctx
                          (+ x (/ cxcell 2))
                          (+ y (/ cycell 2))
-                         creature)))))
+                         creature)
+        (m/restore ctx)
+        ))))
 
 
 (defn clear-background [ctx]
