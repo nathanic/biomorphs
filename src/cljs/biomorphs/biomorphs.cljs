@@ -96,8 +96,8 @@
                (.-getElementById js/document))
       (ev/listen canvas "click" (partial on-click-canvas the-state))
       (ev/listen js/window "popstate" (partial on-popstate the-state))
-      (ev/listen (dom/getElement "randomize") 
-                 "click" 
+      (ev/listen (dom/getElement "randomize")
+                 "click"
                  (partial on-click-randomize the-state))
       )
     ;; invoke first draw
@@ -131,20 +131,51 @@
 (defn try-genome [genome]
   (debug-single-biomorph (dom/getElementByClass "biomorphs") genome))
 
-#_(defn animate-genome [genome-from genome-to]
-  ; maybe a core.async/go block
-  ; calculate a stream of intermediate interpolated genomes
-  ; draw one
-  ; delay
-  ; draw next
-    ; what about requestAnimationFrame?
 
-  )
-; timeout version
-; set up a timeout
-  ; pop a genome
-  ; render it
-  ; set up next timeout with rest of genomes
+(def ANIMATION-INTERVAL 100) ; ms
+
+(defn now [] (.getTime (js/Date.)))
+
+;; this works, but morphing all genes at once can be  a bit discontinuous-looking
+;; perhaps we morph one gene at a time for smoothness...
+(defn animate-genome [genome-from genome-to duration renderer]
+  (let [start-time (now)
+        end-time   (+ start-time duration) ]
+    (letfn [(handler []
+              (let [t     (now)
+                    coeff (/ (- t start-time) duration)
+                    genome (gen/interpolate-genomes
+                             genome-from
+                             genome-to
+                             (min 1.0 coeff)) ]
+                (renderer genome)
+                (if (< coeff 1.0)
+                  (.requestAnimationFrame js/window handler)
+                  ; maybe then reverse it, and just keep doing that
+                  (animate-genome genome-to genome-from duration renderer)
+                  ))) ]
+      (.requestAnimationFrame js/window handler)
+      )))
+
+
+;; another debugging hook
+(def ANIMATION-DURATION 5000)
+
+(defn ^:export debug-animation [canvas genome-a genome-b]
+  (let [ctx      (m/get-context canvas "2d")
+        [cx cy]  (gfx/canvas-dims ctx)
+        genome-a (or genome-a [65 25 1 1 1 1 9 0.9 180])
+        genome-b (or genome-b [120 120 1 4 1 1 9 0.9 180])
+        ]
+    (gfx/clear-background ctx)
+    (animate-genome genome-a genome-b ANIMATION-DURATION
+                    (fn [genome]
+                      (gfx/clear-background ctx)
+                      (gfx/render-creature ctx (/ cx 2) (/ cy 2)
+                                           (gen/stream-creature genome)))
+                    )
+    ))
+
 
 (comment
   (in-ns 'biomorphs.biomorphs)

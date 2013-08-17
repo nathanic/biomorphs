@@ -45,13 +45,13 @@
     {:source-paths ["src/cljs" "src/cljs-repl"]
      :compiler {:output-to "target/resources/public/js/biomorphs_dev.js"}}
 
-    :prod
-    {:source-paths ["src/cljs"]
-     :compiler {:output-to "target/resources/public/js/biomorphs.js"
-                :optimizations :advanced
-                :externs ["externs/jquery-1.9.js"
-                          "externs/jquery-ui.js"]
-                :pretty-print false}}
+    ;; :prod
+    ;; {:source-paths ["src/cljs"]
+    ;;  :compiler {:output-to "target/resources/public/js/biomorphs.js"
+    ;;             :optimizations :advanced
+    ;;             :externs ["externs/jquery-1.9.js"
+    ;;                       "externs/jquery-ui.js"]
+    ;;             :pretty-print false}}
 
     }}
 
