@@ -234,3 +234,6 @@
   ; and rewritten util/index-of 1494 ms
 ;   ; not bad
 ;   ; enough to significantly smooth out the animation
+  ; then i improved turn-direction to a simple nested hashmap thing
+    ; now we're at 1176 ms
+
