@@ -271,13 +271,14 @@
 ; ordering of directions we walk through
 (def DIRECTIONS [:n :ne :e :se :s :sw :w :nw])
 
+; (in-ns 'biomorphs.genetics)
 ; move to the next or previous nominal direction based on :left or :right
 ; that is, a 45 degree movement like :n -> ne
 (defn- turn-direction [dir leftright]
   (let [idx (index-of DIRECTIONS dir)
         op  (if (= leftright :left) dec inc) ]
     (if idx
-      (nth DIRECTIONS (mod (op idx) (count DIRECTIONS)))
+      (get DIRECTIONS (mod (op idx) (count DIRECTIONS)))
       (throw (js/Error. (str dir " is not a valid direction.")))
       )))
 

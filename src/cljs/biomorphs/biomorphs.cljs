@@ -137,6 +137,8 @@
 (defn now [] (.getTime (js/Date.)))
 
 ;; this works, but morphing all genes at once can be  a bit discontinuous-looking
+;; my guess is that scaling the gradient is part of that.
+
 ;; perhaps we morph one gene at a time for smoothness...
 (defn animate-genome [genome-from genome-to duration renderer]
   (let [start-time (now)
@@ -226,4 +228,9 @@
 
 
   )
-
+; stream-creature using nth in turn-direction 1802 ms
+; stream-creature using get in turn-direction 1786 ms
+; stream-creature using get
+  ; and rewritten util/index-of 1494 ms
+;   ; not bad
+;   ; enough to significantly smooth out the animation

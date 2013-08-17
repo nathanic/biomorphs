@@ -74,7 +74,7 @@
 
 ;; there's probably a better way to do this
 ;; but i was relying on a JVMism (.indexOf) previously
-(defn index-of
+#_(defn index-of
   "return the index of the supplied item, or nil"
   [coll item]
   (loop [idx 0, c coll]
@@ -83,6 +83,18 @@
         idx
         (recur (inc idx) (rest c)))
       nil)))
+
+; let's try a vector-specialized version
+; this is inspired by reading cljs.core
+(defn index-of
+  "return the index of the supplied item, or nil"
+  [v item]
+  (let [len (count v)]
+    (loop [i 0]
+      (cond
+        (<= len i)         nil,
+        (= item (get v i)) i,
+        :else              (recur (inc i ))))))
 
 
 (defn index-of-by
