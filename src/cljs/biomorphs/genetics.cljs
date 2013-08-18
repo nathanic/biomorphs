@@ -140,6 +140,10 @@
 (comment
   (default-genome)
   (random-genome)
+  (in-ns 'biomorphs.genetics)
+  (def g (default-genome))
+  (bench 1000000 #(get-gene g :color))
+  ;=> 0.688 ns
   )
 
 ; TODO: consider improving performance by not doing O(n) lookups
@@ -413,9 +417,6 @@
 
   ; very surprised the JS version is not much faster than the old linear search one
   ; seems like hash maps is the way to go
-
-
-
 )
 
 (comment
@@ -445,24 +446,12 @@
      :nw  {:left :w,  :right :n},
      })
 (defn turn-direction
-    [dir leftright]
-    (-> DIRECTIONS (get dir) (get leftright)))
+  "given an initial direction, turn :left or :right by 45 degrees
+  (turn-direction :ne :right) => :e
+  "
+  [dir leftright]
+  (-> DIRECTIONS (get dir) (get leftright)))
 
-
-; i guess cljs doesn't have this?
-(defn double [x] x)
-
-#_(defn calc-branch-vector [genome depth dir]
-  (let [max-branch-len  200 ;; (Math/floor (/ CXCELL 2 8))
-        [lx ly]         (length-genes-for-depth genome depth)
-        [dx dy]         (DIR-VECTORS dir) ]
-
-    ; TODO REWRITE ME
-    (mapv #(Math/floor (double %))
-          [(* lx dx (/ max-branch-len MAX-GENE ))
-           (* ly dy (/ max-branch-len MAX-GENE )) ])
-    ;; [(* dx 100) (* dy 100)]
-    ))
 
 ; TODO? normalize angle to [0,360)
 ; TODO: adjust for the fact that 90 degrees is actually downward in canvas coords
@@ -481,7 +470,7 @@
     ))
 
 (defn get-genetic-elongation
-  "consult the geneome to find the elongation factor for this direction"
+  "consult the genome to find the elongation factor for this direction"
   [genome dir]
   (case dir
     :ne (get-gene genome :elongation-front)
@@ -570,6 +559,9 @@
 
   (measure-creature critter)
   (creature-centroid critter)
+
+; when benchmarking, should take care to pre-force the thunks in the creature seq
+
   )
 
 
@@ -578,6 +570,7 @@
   (lerp a b coeff)
   )
 
+; TODO: also support one-gene-at-a-time morphing in sequence
 (defn interpolate-genomes
   "produce an interpolated intermediate genome between the given genomes
   where coeff=0 means you get purely genome-a, and 1.0 gives you genome-b"
@@ -595,4 +588,4 @@
 (comment
   (interpolate-gene 1 10 20)
   )
-; what about three.js and webgl?
+

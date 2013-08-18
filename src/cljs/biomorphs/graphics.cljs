@@ -4,22 +4,6 @@
             [biomorphs.utils :refer [log clog]]
             ))
 
-; probably get rid of this one
-(defn line'
-  "draw a line."
-  [ctx x y x' y']
-  (-> ctx
-      ;; (m/save)
-      ;; (m/scale 1 -1)
-      ;; (m/rotate Math/PI)
-      (m/begin-path)
-      (m/move-to x y)
-      (m/line-to x' y')
-      (m/stroke)
-      ;; (m/restore)
-      )
-  ctx)
-
 ;;; there must be a better way than string concatenation
 ;;; but this is how mondrian handles it...
 (defn rgb [r g b]
@@ -28,49 +12,31 @@
 (defn rgba [r g b a]
   (str "rgba(" r "," g "," b "," a ")"))
 
-(defn- to-percent [x]
-  (str (* 100.0 x) "%"))
-
 (defn hsl [h s l]
-  (str "hsl(" h "," (to-percent s) "," (to-percent l) ")"))
+  (str "hsla(" h "," (* 100 s) "%," (* 100 l) "%)"))
 
 (defn hsla [h s l a]
-  (str "hsla(" h "," (to-percent s) "," (to-percent l) "," a ")"))
-
-(defn render-creature [ctx x y creature]
-  (let [[center-x center-y] (gen/creature-centroid creature)]
-    (-> ctx
-        (m/save)
-        ; could probably combine the translations
-        (m/translate x y)
-        (m/rotate Math/PI)
-        (m/translate (- center-x) (- center-y))))
-  (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
-    (-> ctx
-        (m/begin-path)
-        (m/stroke-style (apply hsla color))
-        (m/move-to x0 y0)
-        (m/line-to x1 y1)
-        (m/stroke)))
-  (m/restore ctx)
-  ctx)
-
+  (str "hsla(" h "," (* 100 s) "%," (* 100 l) "%," a ")"))
 
 (comment
-  (in-ns 'biomorphs.graphics)
-  (in-ns 'biomorphs.biomorphs)
-  (defn all-creatures
-    "return a seq of creatures, with the parent in the middle of the children"
-    [parent children]
-    (let [[former latter] (split-at (/ (count children) 2) children)]
-      (vec (concat former '(parent) latter))))
-
+  ; can we improve upon hsla?
+  (defn- to-percent [x]
+    (str (* 100.0 x) "%"))  (defn hsla [h s l a]
+    (str "hsla(" h "," (to-percent s) "," (to-percent l) "," a ")"))  (defn hsla2 [h s l a]
+    (format "hsla(%d,%f%%,%f%%,%f)" h (* 100.0 s) (* 100.0 l) a))
+  (defn hsla3 [h s l a]
+    (str "hsla(" h "," (* 100 s) "%," (* 100 l) "%," a ")"))
+  (bench 1000000 (fn [] (hsla 42 0.42 0.42 0.42)))  ;  10   ns
+  (bench 1000000 (fn [] (hsla2 42 0.42 0.42 0.42))) ; 100   ns
+  (bench 1000000 (fn [] (hsla3 42 0.42 0.42 0.42))) ;   7.5 ns
+  ; format is definitely not the way to go
+  ; seems like inlining to-percent helps
   )
-
 
 (defn canvas-dims [ctx]
   (let [canvas (.-canvas ctx)]
     [(.-width canvas) (.-height canvas)]))
+
 
 (defn cell-dims [ctx]
   (let [width     (.-width (.-canvas ctx))
@@ -101,32 +67,6 @@
         [cx cy] (cell-dims ctx) ]
     (pos-to-index pos w cx cy)))
 
-; mouse event handlers:
-  ; on click
-    ; determine creature clicked
-    ; generate children for creature
-    ; redraw
-  ; on hover
-    ; determine creature clicked
-      ; highlight that creature in some way?
-        ; how to represent that?
-      ; draw it without clipping, maybe in an overlay??
-      ; show the genes perhaps?
-        ; might just want to do that anyway
-
-(comment
-  (pos-from-index 5 300 100 100)
-  (pos-to-index [205 105] 300 100 100)
-  (map :eq?
-       (for [idx (range 10)
-             :let [pos (pos-from-index idx 300 100 100)]
-             ]
-         {:idx idx, :pos pos, :eq? (= idx (pos-to-index pos 300 100 100))}
-         ))
-
-  (map #(pos-from-index % 500) (range 9))
-  (int 42.9)
-  )
 
 (defn bounding-box [ctx x y cx cy]
   (-> ctx
@@ -145,8 +85,27 @@
   (.rect ctx x y cx cy)
   (.clip ctx))
 
-; TODO: masked drawing so we don't overlap into another cell
-(defn draw-creatures
+(defn render-creature [ctx x y creature]
+  (let [[center-x center-y] (gen/creature-centroid creature)]
+    (-> ctx
+        (m/save)
+        ; could probably combine the translations
+        (m/translate x y)
+        (m/rotate Math/PI)
+        (m/translate (- center-x) (- center-y))))
+  (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
+    (-> ctx
+        (m/begin-path)
+        (m/stroke-style (apply hsla color))
+        (m/move-to x0 y0)
+        (m/line-to x1 y1)
+        (m/stroke)))
+  (m/restore ctx)
+  ctx)
+
+
+; what about three.js and webgl?
+(defn render-creatures
   [{:keys [ctx genomes]}]
   (let [width           (.-width (.-canvas ctx))
         [cxcell cycell] (cell-dims ctx)
