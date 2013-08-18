@@ -32,7 +32,7 @@
 (defn render
   [state]
   (gfx/clear-background (:ctx state))
-  (gfx/draw-creatures state))
+  (gfx/render-creatures state))
 
 (defn offset-pos
   [evt]
@@ -119,11 +119,6 @@
     (gfx/clear-background ctx)
     (m/stroke-style ctx "red")
     (m/stroke-rect ctx {:x 0, :y 0, :w cx, :h cy})
-    #_(gfx/draw-creature {:ctx    ctx
-                        :genome genome
-                        :pos    [(/ cx 2)
-                                 (/ cy 2) ]
-                        })
     (gfx/render-creature ctx (/ cx 2) (/ cy 2) (gen/stream-creature genome))
 
     ))
@@ -163,20 +158,38 @@
 ;; another debugging hook
 (def ANIMATION-DURATION 5000)
 
+; TODO: randomize button for the animation
 (defn ^:export debug-animation [canvas genome-a genome-b]
   (let [ctx      (m/get-context canvas "2d")
         [cx cy]  (gfx/canvas-dims ctx)
         genome-a (or genome-a [65 25 1 1 1 1 9 0.9 180])
         genome-b (or genome-b [120 120 1 4 1 1 9 0.9 180])
-        ]
+        the-state (atom
+                    {:genomes  [genome-a genome-b]
+                     :ctx      (m/get-context canvas "2d") }) ]
+    (ev/listen (dom/getElement "randomize")
+               "click"
+               (fn []
+                 (log "randomize button" (:anim-req-id @the-state))
+                 (when-let [ari (:anim-req-id @the-state)]
+                   (.cancelAnimationFrame js/window ari)
+                   (animate-genome (gen/random-genome)
+                                   (gen/random-genome)
+                                   ANIMATION-DURATION
+                                   (fn [genome]
+                                     (gfx/clear-background ctx)
+                                     (gfx/render-creature ctx (/ cx 2) (/ cy 2)
+                                                          (gen/stream-creature genome)))
+                                   )
+                   )))
     (gfx/clear-background ctx)
-    (animate-genome genome-a genome-b ANIMATION-DURATION
+    (swap! the-state assoc :anim-req-id
+           (animate-genome genome-a genome-b ANIMATION-DURATION
                     (fn [genome]
                       (gfx/clear-background ctx)
                       (gfx/render-creature ctx (/ cx 2) (/ cy 2)
                                            (gen/stream-creature genome)))
-                    )
-    ))
+                    ))))
 
 
 (comment
@@ -236,4 +249,7 @@
 ;   ; enough to significantly smooth out the animation
   ; then i improved turn-direction to a simple nested hashmap thing
     ; now we're at 1176 ms
+
+; profiling suggests i should take a look at measure-creature
+
 
