@@ -122,3 +122,31 @@
          ))
   )
 
+
+(defn maps->js
+  "transform nested hashmaps into nested js objects"
+  [m]
+  (let [out (js-obj)]
+    (doseq [[k v] m]
+      (aset out
+            (if (keyword? k) (name k) k)
+            (cond
+              (map? v)     (maps->js v)
+              (keyword? v) (name v)
+              :else        v)))
+    out))
+
+
+(defn bench 
+  "simple benchmarking function"
+  [iters f]
+    (let [start   (.getTime (js/Date.))
+          result  (f)
+          _       (dotimes [_ (dec iters)] (f))
+          end     (.getTime (js/Date.))
+          elapsed (- end start)]
+      {:result  result,
+       :elapsed elapsed,
+       :mean    (/ elapsed iters)
+       }))
+

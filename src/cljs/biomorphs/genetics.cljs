@@ -1,8 +1,7 @@
 (ns biomorphs.genetics
-  (:require [biomorphs.utils :refer [index-of index-of-by]]
+  (:require [biomorphs.utils]
             [goog.math :refer [clamp angleDx angleDy lerp]]
-            )
-  )
+            ))
 
 ; logic for defining and manipulating genomes
 ; and calculating their corresponding phenotypes
@@ -144,18 +143,17 @@
   (def g (default-genome))
   (bench 1000000 #(get-gene g :color))
   ;=> 0.688 ns
+  (bench 1000000 #(get-genetic-angle g :se))
+  ;=> 3.57 ns
+
+  (bench 1000000 #(get-genetic-expansion g))
+  ;=> 1.397 ns
+
+  (bench 1000000 #(get-genetic-gradient g 5))
+  ;=> 1.467 ns
   )
 
-; TODO: consider improving performance by not doing O(n) lookups
-; could scan GENOTYPE and build a hash (gene-name -> index)
-; (but oh well, n is always small here)
-; UPDATE: profiling suggests we spend a lot of time doing this
-; so it'd be worth speeding up
-; we don't *really* need a concept of ordinality with this new genome
-; could just do it as hash-maps from name -> gdef and name -> gene
-; i *think* small hash-maps are implemented as JS objects
-; though we might need to define an order for succinct url hashes
-(defn get-gene-index
+#_(defn get-gene-index
   "gene-name -> ordinal position in genome vector, else nil"
   [gene-name]
   (index-of-by (fn [{:keys [name]}]
@@ -272,169 +270,7 @@
     [(* grad (get-gene genome :hue)) (* 1.0) (* grad 0.5) (* 1.0)]
     ))
 
-; ordering of directions we walk through
-(def DIRECTIONS [:n :ne :e :se :s :sw :w :nw])
-; XXX we end up linearly searching this a lot
-; is there a way we can make that faster?
-; could programmatically build a JS object like
-; directions.ne = { left: 'n', :right :'e' } etc.
-; or we could build a JS array and just linearly search it
-; might be worth benchmarking
 
-(comment
-
-  (defn maps->js
-    "transform nested hashmaps into nested js objects"
-    [m]
-    (let [out (js-obj)]
-      (doseq [[k v] m]
-        (aset out
-              (if (keyword? k) (name k) k)
-              (cond
-                (map? v)     (my-js-map v)
-                (keyword? v) (name v)
-                :else        v)))
-      out))
-
-
-  ; optimization attempt: build a js object for looking up directions
-  (def DIRECTIONS'
-    (let [dirs [:n :ne :e :se :s :sw :w :nw]
-          len  (count dirs)
-          out  (js-obj)
-          ]
-      (loop [i 0]
-        (when (> len i)
-          (aset out
-                (name (get dirs i))
-                (doto (js-obj)
-                  (aset! "left"  (name (get dirs (mod (dec i) len))))
-                  (aset! "right" (name (get dirs (mod (inc i) len))))))
-          (recur (inc i))))
-      out))
-
-
-  (set! (.-f js/window)
-        (doto (js-obj)
-          (aset "yo" "gabba")
-          (aset "gabba" "gabba")
-          ))
-
-  (defn make-dir-lut-map []
-    (let [len (count DIRECTIONS)]
-      (loop [i 0, m {}]
-        (if (<= len i)
-          m     ; exit loop
-          (recur (inc i)
-                 (assoc m
-                        (get DIRECTIONS i)
-                        {:left  (get DIRECTIONS (mod (dec i) len))
-                         :right (get DIRECTIONS (mod (inc i) len))
-                         }))))))
-
-  (def d (make-dir-lut-map))
-  (my-js-map d)
-
-  (set! (.-d js/window) (my-js-map d))
-
-  (-> (.-dirs js/window)
-      (aget "se")
-      (aget "right")
-      )
-
-  (defn turn-direction [dir leftright]
-    (-> (.-dirs js/window)
-        (aget (name dir))
-        (aget (name leftright))
-        keyword
-        ))
-
-)
-
-(comment
-  ; dang this is so much simpler than what i had been doing
-  (def hashdirs
-    {:n   {:left :nw, :right :ne},
-     :ne  {:left :n,  :right :e},
-     :e   {:left :ne, :right :se},
-     :se  {:left :e,  :right :s},
-     :s   {:left :se, :right :sw},
-     :sw  {:left :s,  :right :w}
-     :w   {:left :sw, :right :nw},
-     :nw  {:left :w,  :right :n},
-     })
-
-  (defn turn-direction-hash
-    [dir leftright]
-    (get-in hashdirs [dir leftright]))
-
-  ; let's try this instead of get-in
-  ; (which requires building a vector)
-  (defn turn-direction-hash2
-    [dir leftright]
-    (-> hashdirs (get dir) (get leftright)))
-
-  (def jsdirs
-    (maps->js
-      {:n   {:left :nw, :right :ne},
-       :ne  {:left :n,  :right :e},
-       :e   {:left :ne, :right :se},
-       :se  {:left :e,  :right :s},
-       :s   {:left :se, :right :sw},
-       :sw  {:left :s,  :right :w}
-       :w   {:left :sw, :right :nw},
-       :nw  {:left :w,  :right :n},
-       }))
-
-
-(defn turn-direction-js
-  [dir leftright]
-  (-> jsdirs
-      (aget (name dir))
-      (aget (name leftright))
-      keyword
-      ))
-
-
-(def DIRECTIONS-old [:n :ne :e :se :s :sw :w :nw])
-(defn- turn-direction-old [dir leftright]
-  (let [idx (index-of DIRECTIONS-old dir)
-        op  (if (= leftright :left) dec inc) ]
-    (if idx
-      (get DIRECTIONS-old (mod (op idx) (count DIRECTIONS-old)))
-      (throw (js/Error. (str dir " is not a valid direction.")))
-      )))
-
-  (bench 1000000 (fn [] (turn-direction-hash :s :left)))
-  ; mean 3.796 ns
-  (bench 1000000 (fn [] (turn-direction-js :s :left)))
-  ; mean 5.83 ns
-  (bench 1000000 (fn [] (turn-direction :s :left)))
-  ; mean 5.966 ns
-
-  (bench 1000000 (fn [] (turn-direction-hash2 :s :left)))
-  ; mean 0.596 ns!  holy crap
-
-  ; very surprised the JS version is not much faster than the old linear search one
-  ; seems like hash maps is the way to go
-)
-
-(comment
-  (defn bench [iters f]
-    (let [start   (.getTime (js/Date.))
-          result  (f)
-          _       (dotimes [_ (dec iters)] (f))
-          end     (.getTime (js/Date.))
-          elapsed (- end start)]
-      {:result  result,
-       :elapsed elapsed,
-       :mean    (/ elapsed iters)
-       }))
-  )
-
-; (in-ns 'biomorphs.genetics)
-; move to the next or previous nominal direction based on :left or :right
-; that is, a 45 degree movement like :n -> ne
 (def DIRECTIONS
     {:n   {:left :nw, :right :ne},
      :ne  {:left :n,  :right :e},
@@ -445,6 +281,7 @@
      :w   {:left :sw, :right :nw},
      :nw  {:left :w,  :right :n},
      })
+
 (defn turn-direction
   "given an initial direction, turn :left or :right by 45 degrees
   (turn-direction :ne :right) => :e
@@ -516,8 +353,7 @@
           [x' y'] [(+ x dx) (+ y dy)]
           segment {:x0 x, :y0 y, :x1 x', :y1 y',
                    :color (color-for-depth' genome depth-remain)
-                   }
-          ]
+                   } ]
       (cons segment
             (concat (lazy-seq (stream-subtree genome [x' y'] (turn-direction dir :left) (dec depth-remain)))
                     (lazy-seq (stream-subtree genome [x' y'] (turn-direction dir :right) (dec depth-remain))))))))
@@ -533,15 +369,13 @@
   )
 
 
-; okay, armed with our streaming creature description,
-; let's see how hard it is to measure it
-; it's a monoid if you squint (ignoring map vs vector)
 (defn- extreme-coords
   [[xmin ymin, xmax ymax] {:keys [x0 y0, x1 y1]}]
-  [(min (or xmin x0) x0 x1)
-   (min (or ymin y0) y0 y1)
-   (max (or xmax x0) x0 x1)
-   (max (or ymax y0) y0 y1) ])
+  [(if xmin (min xmin x0 x1) (min x0 x1))
+   (if ymin (min ymin y0 y1) (min y0 y1))
+   (if xmax (max xmax x0 x1) (max x0 x1))
+   (if ymax (max ymax y0 y1) (max y0 y1))
+    ])
 ;; NB: min and max seem to treat nil==0
 
 (defn measure-creature [creature]
@@ -556,11 +390,19 @@
 (comment
 
   (def critter [ {:x0 -10, :y0 5, :x1 10, :y1 15} ])
+  (def critter (doall (stream-creature [65 25 1 1 1 1 9 0.9 180])))
+  (count critter) ; 1023 segments
 
   (measure-creature critter)
-  (creature-centroid critter)
+  (:mean (bench 1000 #(creature-centroid critter)))
+  ;=> 6.7 ms
+  (:mean (bench 1000 #(creature-centroid (stream-creature [65 25 1 1 1 1 9 0.9 180]))))
+  ;=> 65 ms
 
-; when benchmarking, should take care to pre-force the thunks in the creature seq
+  ; simple reduction for lower bound on speed
+  (:mean (bench 1000 (fn [] (reduce #(inc %) 0 critter))))
+  ;=> 0.832 ms
+
 
   )
 
@@ -570,13 +412,41 @@
   (lerp a b coeff)
   )
 
-; TODO: also support one-gene-at-a-time morphing in sequence
 (defn interpolate-genomes
   "produce an interpolated intermediate genome between the given genomes
   where coeff=0 means you get purely genome-a, and 1.0 gives you genome-b"
   [genome-a genome-b coeff]
   {:pre [(<= 0.0 coeff) (<= coeff 1.0)]}
   (mapv (partial interpolate-gene coeff) genome-a genome-b))
+
+
+; experimental, not tried yet!
+(defn interpolate-genomes-gradual
+  "produce an interpolated intermediate genome between the given genomes
+  where coeff=0 means you get purely genome-a, and 1.0 gives you genome-b"
+  [genome-a genome-b coeff]
+  {:pre [(<= 0.0 coeff) (<= coeff 1.0)]}
+  (let [num-genes (count GENOTYPE)
+        sub-coeff (/ coeff num-genes)
+        coeff-idx (mod coeff num-genes) ]
+    (loop [i 0, out []]
+      (cond
+        (>= i num-genes)
+        out,
+        (< i coeff-idx)
+        (recur (inc i)
+               (conj out (get genome-b i))),
+        (= i coeff-idx)
+        (recur (inc i)
+               (conj out
+                     (interpolate-gene sub-coeff
+                                       (get genome-a i)
+                                       (get genome-b i)))),
+        :else
+        (recur (inc i)
+               (conj out (get genome-a i)))
+        ))))
+
 
 (defn interpolations
   "returns a lazy seq of n interpolated genomes,
