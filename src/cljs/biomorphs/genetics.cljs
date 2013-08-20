@@ -72,8 +72,8 @@
    {:name    :iterations
     :index   6
     :default 2
-    :min     0
-    :max     9
+    :min     1
+    :max     10
     ;; :type    :int
     :mutation-rate 0.2
     ; count of branchings, where 0 is Y-shaped
@@ -110,6 +110,7 @@
 
 (comment
   ; could build :index automatically...
+  ; but it's kind of nice to have it explicit for reference
   (map-indexed
     (fn [idx gdef]
       (assoc gdef :index idx))
@@ -153,46 +154,19 @@
   ;=> 1.467 ns
   )
 
-#_(defn get-gene-index
-  "gene-name -> ordinal position in genome vector, else nil"
-  [gene-name]
-  (index-of-by (fn [{:keys [name]}]
-                 (= name gene-name))
-               GENOTYPE))
-
-#_(defn get-gene-def
-  "gene-name -> gdef, else nil"
-  [gene-name]
-  (get GENOTYPE (get-gene-index gene-name)))
-
-#_(defn get-gene
-  "retrieve a gene value from the supplied genome given a gene name.
-  returns nil if not found."
-  [genome gene-name]
-  (get genome (get-gene-index gene-name)))
-
-
 (comment
-  (get-gene (default-genome) :color)
-  (get-gene (default-genome) :iterations)
-  (get-gene (default-genome) :angle-front)
-  (get-gene (default-genome) :elongation-front)
+  (defn fixup-gene [gdef gval]
+    (let [fixer (case (:type gdef)
+                  :int  Math/floor
+                  identity
+                  )]
+      (fixer (clamp gval (:min gdef) (:max gdef)))))
 
-  (index-of-by odd? [2 4 6 8 9 4])
+  (defn fixup-genome [genome]
+    (map fixup-gene
+         GENOTYPE
+         genome))
   )
-
-
-(defn fixup-gene [gdef gval]
-  (let [fixer (case (:type gdef)
-                :int  Math/floor
-                identity
-                )]
-    (fixer (clamp gval (:min gdef) (:max gdef)))))
-
-(defn fixup-genome [genome]
-  (map fixup-gene
-       GENOTYPE
-       genome))
 
 (defn mutate-gene
   "given a gene definition and gene value, randomly increase or decrease it
@@ -229,185 +203,8 @@
       (vec children))))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Phenotype Expression Support
 
-; so other modules don't have to care about gene names
-; also: rounding gets around an infinite loop bug
-(defn get-genome-iterations [genome]
-  (Math/round (get-gene genome :iterations)))
-
-(defn get-genetic-gradient
-  "get the cumulative gradient factor for a branch at this depth"
-  [genome depth-remain]
-  ; TODO: probably needs adjustment
-  ; 0 iterations -> still one branching
-  ; also i don't like writing in terms of depth-remain...
-  (Math/pow (get-gene genome :gradient)
-            (- (get-genome-iterations genome) depth-remain)))
-
-
-(defn color-for-depth
-  "calculate the color of this branch based on both the genome and the branch depth"
-  [genome depth]
-  ; TODO impl this for real
-  ; that is, keeping the creature's hue,
-  ; but reduce lightness or value or something
-  (nth (cycle [[10 10 240]
-               [200 100 10]
-               [10 200 10]
-               [200 50 50]
-               [200 200 10]
-               ])
-       depth))
-
-; (in-ns 'biomorphs.genetics)
-; this isn't coming out dramatic enough
-(defn color-for-depth'
-  "the color will be the hue gene, with lightness and alpha affected by the gradient gene"
-  [genome depth-remain]
-  (let [grad (get-genetic-gradient genome depth-remain)]
-    [(* grad (get-gene genome :hue)) (* 1.0) (* grad 0.5) (* 1.0)]
-    ))
-
-
-(def DIRECTIONS
-    {:n   {:left :nw, :right :ne},
-     :ne  {:left :n,  :right :e},
-     :e   {:left :ne, :right :se},
-     :se  {:left :e,  :right :s},
-     :s   {:left :se, :right :sw},
-     :sw  {:left :s,  :right :w}
-     :w   {:left :sw, :right :nw},
-     :nw  {:left :w,  :right :n},
-     })
-
-(defn turn-direction
-  "given an initial direction, turn :left or :right by 45 degrees
-  (turn-direction :ne :right) => :e
-  "
-  [dir leftright]
-  (-> DIRECTIONS (get dir) (get leftright)))
-
-
-; TODO? normalize angle to [0,360)
-; TODO: adjust for the fact that 90 degrees is actually downward in canvas coords
-(defn get-genetic-angle
-  "consult the genome to calculate an angle in degrees for the given nominal direction"
-  [genome dir]
-  (case dir
-    :n  90
-    :ne (-  90 (get-gene genome :angle-front))
-    :e  0
-    :se (+ 270 (get-gene genome :angle-rear))
-    :s  270
-    :sw (- 270 (get-gene genome :angle-rear))
-    :w  180
-    :nw (+  90 (get-gene genome :angle-front))
-    ))
-
-(defn get-genetic-elongation
-  "consult the genome to find the elongation factor for this direction"
-  [genome dir]
-  (case dir
-    :ne (get-gene genome :elongation-front)
-    :nw (get-gene genome :elongation-front)
-    :se (get-gene genome :elongation-rear)
-    :sw (get-gene genome :elongation-rear)
-    1.0))
-
-(defn get-genetic-expansion
-  [genome]
-  [(get-gene genome :expansion-x)
-   (get-gene genome :expansion-y)])
-
-(defn calc-branch-vector
-  "reckon the vector required to make a branch in direction `dir`,
-  after `depth` iterations"
-  [genome depth dir]
-  (let [angle   (get-genetic-angle genome dir)
-        elong   (get-genetic-elongation genome dir)
-        grad    (get-genetic-gradient genome depth)
-        len     (* elong grad BASE-BRANCH-LEN)
-        [ex ey] (get-genetic-expansion genome) ]
-    [(* ex (angleDx angle len))
-     (* ey (angleDy angle len))]))
-
-; apply expansion here or just scale the canvas while drawing?
-; what *is* expansion?  just a coefficients on the branch vector components?
-
-; also re: scaling, we easily hit creatures too big to fit in their cells
-; the nardella version seems to compensate the scale genes to try to keep things fitting
-; we could basically walk through the drawing algorithm but only save the extrema points...
-; UPDATE: doing measurement now, can definitely do this
-
-; so do we follow nardella and dynamically cap the expansion genes?
-
-; might be interesting to change the drawing algorithm such that the genetics module
-; generates a lazy seq of line segments, and the drawing algorithm just interprets that...
-
-; maybe call it subtree-seq
-(defn stream-subtree [genome [x y] dir depth-remain]
-  (when (pos? depth-remain)
-    (let [[dx dy] (calc-branch-vector genome depth-remain dir)
-          [x' y'] [(+ x dx) (+ y dy)]
-          segment {:x0 x, :y0 y, :x1 x', :y1 y',
-                   :color (color-for-depth' genome depth-remain)
-                   } ]
-      (cons segment
-            (concat (lazy-seq (stream-subtree genome [x' y'] (turn-direction dir :left) (dec depth-remain)))
-                    (lazy-seq (stream-subtree genome [x' y'] (turn-direction dir :right) (dec depth-remain))))))))
-
-; maybe creature-seq
-(defn stream-creature [genome]
-  (stream-subtree genome [0 0] :n (inc (get-genome-iterations genome))))
-
-(comment
-  (in-ns 'biomorphs.genetics)
-  (stream-creature [45 45 1 1 1 1 3 0.9 180])
-
-  )
-
-
-(defn- extreme-coords
-  [[xmin ymin, xmax ymax] {:keys [x0 y0, x1 y1]}]
-  [(if xmin (min xmin x0 x1) (min x0 x1))
-   (if ymin (min ymin y0 y1) (min y0 y1))
-   (if xmax (max xmax x0 x1) (max x0 x1))
-   (if ymax (max ymax y0 y1) (max y0 y1))
-    ])
-;; NB: min and max seem to treat nil==0
-
-(defn measure-creature [creature]
-  (reduce extreme-coords [nil nil nil nil] creature))
-
-; NB these coords are in creature-space
-(defn creature-centroid [creature]
-  (let [[x0 y0, x1 y1] (measure-creature creature)]
-    [(* 0.5 (+ x0 x1))
-     (* 0.5 (+ y0 y1))]))
-
-(comment
-
-  (def critter [ {:x0 -10, :y0 5, :x1 10, :y1 15} ])
-  (def critter (doall (stream-creature [65 25 1 1 1 1 9 0.9 180])))
-  (count critter) ; 1023 segments
-
-  (measure-creature critter)
-  (:mean (bench 1000 #(creature-centroid critter)))
-  ;=> 6.7 ms
-  (:mean (bench 1000 #(creature-centroid (stream-creature [65 25 1 1 1 1 9 0.9 180]))))
-  ;=> 65 ms
-
-  ; simple reduction for lower bound on speed
-  (:mean (bench 1000 (fn [] (reduce #(inc %) 0 critter))))
-  ;=> 0.832 ms
-
-
-  )
-
-
-(defn interpolate-gene
+(defn- interpolate-gene
   [coeff a b]
   (lerp a b coeff)
   )
@@ -448,14 +245,171 @@
         ))))
 
 
-(defn interpolations
-  "returns a lazy seq of n interpolated genomes,
-  varying linearly from genome-a to genome-b"
-  [n genome-a genome-b]
-  (for [x (range (inc n))]
-    (interpolate-genomes genome-a genome-b (/ x n))))
-
 (comment
+  (defn interpolations
+    "returns a lazy seq of n interpolated genomes,
+    varying linearly from genome-a to genome-b"
+    [n genome-a genome-b]
+    (for [x (range (inc n))]
+      (interpolate-genomes genome-a genome-b (/ x n))))
+
   (interpolate-gene 1 10 20)
   )
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Phenotypic Properties
+
+(defn get-genetic-iterations [genome]
+  (inc (Math/round (get-gene genome :iterations))))
+
+(defn get-genetic-gradient
+  "get the cumulative gradient factor for a branch at this depth"
+  [genome depth]
+  ; TODO: probably needs adjustment
+  ; 0 iterations -> still one branching
+  (Math/pow (get-gene genome :gradient) depth))
+
+
+; this could stand to be a bit more dramatic
+(defn get-genetic-color
+  "the color will be the hue gene, with lightness and alpha affected by the gradient gene, returns an hsla 4-vector"
+  [genome depth]
+  (let [grad (get-genetic-gradient genome depth)]
+    [(* grad (get-gene genome :hue)) (* 1.0) (* grad 0.5) (* 1.0)]
+    ))
+
+; TODO? normalize angle to [0,360)
+(defn get-genetic-angle
+  "consult the genome to calculate an angle in degrees for the given nominal direction"
+  [genome dir]
+  (case dir
+    :n  90
+    :ne (-  90 (get-gene genome :angle-front))
+    :e  0
+    :se (+ 270 (get-gene genome :angle-rear))
+    :s  270
+    :sw (- 270 (get-gene genome :angle-rear))
+    :w  180
+    :nw (+  90 (get-gene genome :angle-front))
+    ))
+
+(defn get-genetic-elongation
+  "consult the genome to find the elongation factor for this direction"
+  [genome dir]
+  (case dir
+    :ne (get-gene genome :elongation-front)
+    :nw (get-gene genome :elongation-front)
+    :se (get-gene genome :elongation-rear)
+    :sw (get-gene genome :elongation-rear)
+    1.0))
+
+(defn get-genetic-expansion
+  [genome]
+  [(get-gene genome :expansion-x)
+   (get-gene genome :expansion-y)])
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Creature Morphology
+
+; a little symbolic navigation graph
+(def DIRECTIONS
+    {:n   {:left :nw, :right :ne},
+     :ne  {:left :n,  :right :e},
+     :e   {:left :ne, :right :se},
+     :se  {:left :e,  :right :s},
+     :s   {:left :se, :right :sw},
+     :sw  {:left :s,  :right :w}
+     :w   {:left :sw, :right :nw},
+     :nw  {:left :w,  :right :n},
+     })
+
+(defn- turn-direction
+  "given an initial direction, turn :left or :right by 45 degrees
+  (turn-direction :ne :right) => :e "
+  [dir leftright]
+  (-> DIRECTIONS (get dir) (get leftright)))
+
+
+(defn- calc-branch-vector
+  "reckon the vector required to make a branch in direction `dir`,
+  after `depth` iterations"
+  [genome depth dir]
+  (let [angle   (get-genetic-angle genome dir)
+        elong   (get-genetic-elongation genome dir)
+        grad    (get-genetic-gradient genome depth)
+        len     (* elong grad BASE-BRANCH-LEN)
+        [ex ey] (get-genetic-expansion genome) ]
+    [(* ex (angleDx angle len))
+     (* ey (angleDy angle len))]))
+
+
+; we easily hit creatures too big to fit in their cells
+; the nardella version seems to compensate the scale genes to try to keep things fitting
+
+; maybe call it subtree-seq
+(defn- stream-subtree [genome [x y] dir depth]
+  (when (< depth (get-genetic-iterations genome))
+    (let [[dx dy] (calc-branch-vector genome depth dir)
+          [x' y'] [(+ x dx) (+ y dy)]
+          segment {:x0 x, :y0 y, :x1 x', :y1 y',
+                   :color (get-genetic-color genome depth)
+                   } ]
+      (cons segment
+            (concat (lazy-seq (stream-subtree genome [x' y']
+                                              (turn-direction dir :left) (inc depth)))
+                    (lazy-seq (stream-subtree genome [x' y']
+                                              (turn-direction dir :right) (inc depth))))))))
+
+; maybe call it creature-seq
+(defn stream-creature [genome]
+  (stream-subtree genome [0 0] :n 0))
+
+(comment
+  (in-ns 'biomorphs.genetics)
+  (stream-creature [45 45 1 1 1 1 3 0.9 180])
+  )
+
+
+(defn- extreme-coords
+  [[xmin ymin, xmax ymax] {:keys [x0 y0, x1 y1]}]
+  [(if xmin (min xmin x0 x1) (min x0 x1))
+   (if ymin (min ymin y0 y1) (min y0 y1))
+   (if xmax (max xmax x0 x1) (max x0 x1))
+   (if ymax (max ymax y0 y1) (max y0 y1))
+    ])
+;; NB: min and max seem to treat nil==0
+;; profiling on chrome showed the above to be faster
+;; than the arguably more elegant (min (or xmin x0) x0 x1)
+
+(defn measure-creature [creature]
+  (reduce extreme-coords [nil nil nil nil] creature))
+
+; NB these coords are in creature-space
+(defn creature-centroid [creature]
+  (let [[x0 y0, x1 y1] (measure-creature creature)]
+    [(* 0.5 (+ x0 x1))
+     (* 0.5 (+ y0 y1))]))
+
+(comment
+
+  (def critter [ {:x0 -10, :y0 5, :x1 10, :y1 15} ])
+  (def critter (doall (stream-creature [65 25 1 1 1 1 9 0.9 180])))
+  (count critter) ; 1023 segments
+
+  (def bench biomorphs.utils/bench)
+  (measure-creature critter)
+  (:mean (bench 1000 #(creature-centroid critter)))
+  ;=> 6.7 ms
+  (:mean (bench 1000 #(creature-centroid (stream-creature [65 25 1 1 1 1 9 0.9 180]))))
+  ;=> 65 ms
+
+  ; simple reduction for lower bound on speed
+  (:mean (bench 1000 (fn [] (reduce #(inc %) 0 critter))))
+  ;=> 0.832 ms
+
+  )
+
 
