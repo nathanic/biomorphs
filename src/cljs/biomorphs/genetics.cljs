@@ -1,5 +1,5 @@
 (ns biomorphs.genetics
-  (:require [biomorphs.utils]
+  (:require [biomorphs.utils :refer [log]]
             [goog.math :refer [clamp angleDx angleDy lerp]]
             ))
 
@@ -196,6 +196,7 @@
     (mutate-genome parent-genome)))
 
 ; lame way to ensure uniqueness...
+; hopefully i'll think of something better later.
 (defn make-children-unique [parent-genome]
   (loop [children #{}]
     (if (< (count children) CHILD-COUNT)
@@ -224,8 +225,10 @@
   [genome-a genome-b coeff]
   {:pre [(<= 0.0 coeff) (<= coeff 1.0)]}
   (let [num-genes (count GENOTYPE)
-        sub-coeff (/ coeff num-genes)
-        coeff-idx (mod coeff num-genes) ]
+        prod      (* coeff num-genes)
+        coeff-idx (Math/floor prod)
+        sub-coeff (- prod coeff-idx)
+        ]
     (loop [i 0, out []]
       (cond
         (>= i num-genes)
@@ -246,6 +249,12 @@
 
 
 (comment
+  (def coeff 0.6)
+  (def g-idx (Math/floor (* coeff (count GENOTYPE))))
+  (def prod (* coeff (count GENOTYPE)))
+  (def sub-coeff (- prod (Math/floor prod)))
+
+
   (defn interpolations
     "returns a lazy seq of n interpolated genomes,
     varying linearly from genome-a to genome-b"

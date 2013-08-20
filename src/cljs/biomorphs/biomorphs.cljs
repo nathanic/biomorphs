@@ -141,7 +141,7 @@
     (letfn [(handler []
               (let [t     (now)
                     coeff (/ (- t start-time) duration)
-                    genome (gen/interpolate-genomes
+                    genome (gen/interpolate-genomes-gradual
                              genome-from
                              genome-to
                              (min 1.0 coeff)) ]
