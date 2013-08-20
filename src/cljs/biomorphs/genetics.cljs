@@ -3,10 +3,6 @@
             [goog.math :refer [clamp angleDx angleDy lerp]]
             ))
 
-; logic for defining and manipulating genomes
-; and calculating their corresponding phenotypes
-; (but no canvas/GUI code)
-
 ;; TERMINOLOGY
 ;; - gene: a particular [numeric] value that is expressed somehow in the
 ;; appearance of the resulting creature
@@ -24,8 +20,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Genotype Definition & Gene Manipulation
 
-; this genotype is lifted from http://www.annanardella.it/biomorph.html
-; everything is implicitly :type :double unless specified otherwise
+; this genotype was originally inspired by http://www.annanardella.it/biomorph.html
 (def GENOTYPE
   [{:name    :angle-front
     :index    0
@@ -204,7 +199,6 @@
       (vec children))))
 
 
-
 (defn- interpolate-gene
   [coeff a b]
   (lerp a b coeff)
@@ -218,7 +212,8 @@
   (mapv (partial interpolate-gene coeff) genome-a genome-b))
 
 
-; experimental, not tried yet!
+; seems to work but could use some tweaking
+; there is apparently some gene it spends time on that doesn't produce much visible change
 (defn interpolate-genomes-gradual
   "produce an interpolated intermediate genome between the given genomes
   where coeff=0 means you get purely genome-a, and 1.0 gives you genome-b"
@@ -227,8 +222,7 @@
   (let [num-genes (count GENOTYPE)
         prod      (* coeff num-genes)
         coeff-idx (Math/floor prod)
-        sub-coeff (- prod coeff-idx)
-        ]
+        sub-coeff (- prod coeff-idx) ]
     (loop [i 0, out []]
       (cond
         (>= i num-genes)

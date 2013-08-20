@@ -5,7 +5,7 @@
             ))
 
 ;;; there must be a better way than string concatenation
-;;; but this is how mondrian handles it...
+;;; but this is how every canvas example i've seen handles it...
 (defn rgb [r g b]
   (str "rgb(" r "," g "," b ")"))
 
@@ -18,25 +18,10 @@
 (defn hsla [h s l a]
   (str "hsla(" h "," (* 100 s) "%," (* 100 l) "%," a ")"))
 
-(comment
-  ; can we improve upon hsla?
-  (defn- to-percent [x]
-    (str (* 100.0 x) "%"))  (defn hsla [h s l a]
-    (str "hsla(" h "," (to-percent s) "," (to-percent l) "," a ")"))  (defn hsla2 [h s l a]
-    (format "hsla(%d,%f%%,%f%%,%f)" h (* 100.0 s) (* 100.0 l) a))
-  (defn hsla3 [h s l a]
-    (str "hsla(" h "," (* 100 s) "%," (* 100 l) "%," a ")"))
-  (bench 1000000 (fn [] (hsla 42 0.42 0.42 0.42)))  ;  10   ns
-  (bench 1000000 (fn [] (hsla2 42 0.42 0.42 0.42))) ; 100   ns
-  (bench 1000000 (fn [] (hsla3 42 0.42 0.42 0.42))) ;   7.5 ns
-  ; format is definitely not the way to go
-  ; seems like inlining to-percent helps
-  )
 
 (defn canvas-dims [ctx]
   (let [canvas (.-canvas ctx)]
     [(.-width canvas) (.-height canvas)]))
-
 
 (defn cell-dims [ctx]
   (let [width     (.-width (.-canvas ctx))
@@ -61,6 +46,7 @@
     (+ col (* row per-row))
     ))
 
+; i think this one is currently unused
 (defn pos-to-index-from-ctx
   [ctx pos]
   (let [[w _]   (canvas-dims ctx)

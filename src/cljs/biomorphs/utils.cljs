@@ -137,7 +137,7 @@
     out))
 
 
-(defn bench 
+(defn bench
   "simple benchmarking function"
   [iters f]
     (let [start   (.getTime (js/Date.))

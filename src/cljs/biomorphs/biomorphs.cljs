@@ -158,7 +158,6 @@
 ;; another debugging hook
 (def ANIMATION-DURATION 5000)
 
-; TODO: randomize button for the animation
 (defn ^:export debug-animation [canvas genome-a genome-b]
   (let [ctx      (m/get-context canvas "2d")
         [cx cy]  (gfx/canvas-dims ctx)
@@ -196,8 +195,7 @@
   (in-ns 'biomorphs.biomorphs)
   (map :name gen/GENOTYPE)
   (try-genome [45 45 1 1 1 1 3 0.9 180])
-  (try-genome [120 120 1 4 1 1 9 0.9 180])
-  (try-genome [45 45 2 1 1 1 9 0.8 180])
+  (try-genome [120 120 1 4 1 1 9 0.9 180]) (try-genome [45 45 2 1 1 1 9 0.8 180])
   (try-genome [45 45 2 1 1 1 2 1.5 180])
   (try-genome [-80 45 -4 2 1 1 6 0.9 180])
   (try-genome [90 45 1 1 1 1 2 2 180])
