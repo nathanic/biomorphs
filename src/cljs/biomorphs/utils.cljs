@@ -62,6 +62,7 @@
   "writes to js console.log"
   [& stuff]
   (.log js/console (apply str (interpose " " stuff)))
+  ;; (.log js/console (apply pr-str (interpose " " stuff)))
   )
 
 (defn clog

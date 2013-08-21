@@ -48,16 +48,42 @@
 (defn deserialize-state [ser-state]
   (cljs.reader/read-string ser-state))
 
+; working on some bookmarkability
+(defn generate-location-hash [state]
+  (apply str "#"
+         (interpose
+           ","
+           (for [g (:genomes state)]
+             (str "[" (apply str (map (partial format "%3.4f,") g)) "]"))))
+  )
+
+(defn parse-location-hash [state frag]
+  (if (empty? frag)
+    state
+    (assoc state
+           :genomes (cljs.reader/read-string
+                      (str "[" (subs frag 1) "]")))))
+
+(comment
+  (def genomes '([267.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [267.5999593064189 283.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [267.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 204.73172029294074] [249.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [249.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [267.5999593064189 265.17056196928024 -7.553424805495888 -2.145419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [249.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [285.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [249.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074]))
+
+  (parse-location-hash {} (generate-location-hash {:genomes genomes}))
+  )
+
 ; TODO: also do some kind of hash encoding for bookmarkability?
 (defn push-state [state]
-  (.pushState js/history (serialize-state state) "" nil))
+  (log "saving state:" (serialize-state state))
+  (.pushState js/history (serialize-state state) "" (generate-location-hash state)))
 
 (defn on-popstate
   [the-state evt]
-  (when (.-state evt)
-    (.log js/console "restoring state" (.-state evt))
-    (swap! the-state merge (deserialize-state (.-state evt)))
-    (render @the-state)))
+  (log "popstate evt fired")
+  (cond
+    (.-state evt)
+    (do (.log js/console "restoring state from pop" (.-state evt))
+        (swap! the-state merge (deserialize-state (.-state evt)))
+        (render @the-state)),
+    ))
 
 
 (defn on-click-canvas
@@ -92,6 +118,10 @@
                      :ctx      (m/get-context canvas "2d")
                      })
         ]
+    (when (not-empty (.-hash js/location))
+      (let [state @the-state]
+        (log "restoring state from location hash")
+        (swap! the-state merge (parse-location-hash state (.-hash js/location)))))
     (when (and js/document
                (.-getElementById js/document))
       (ev/listen canvas "click" (partial on-click-canvas the-state))
@@ -126,8 +156,6 @@
 (defn try-genome [genome]
   (debug-single-biomorph (dom/getElementByClass "biomorphs") genome))
 
-
-(def ANIMATION-INTERVAL 100) ; ms
 
 (defn now [] (.getTime (js/Date.)))
 
