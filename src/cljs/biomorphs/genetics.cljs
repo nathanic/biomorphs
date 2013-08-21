@@ -118,6 +118,9 @@
 (defn get-gene [genome gene-name]
   (get genome (:index (get GENOTYPE-LUT gene-name))))
 
+(defn get-gene-index [gene-name]
+  (:index (get GENOTYPE-LUT gene-name)))
+
 (defn default-genome []
   (mapv :default GENOTYPE))
 
@@ -184,6 +187,14 @@
            idx
            (mutate-gene (get GENOTYPE idx)
                         (get genome idx)))))
+
+(defn update-gene
+  "produce an updated version of a genome via updater function
+  f :: gene -> gene"
+  [genome gene-name f]
+  (assoc genome
+         (get-gene-index gene-name)
+         (f (get-gene genome gene-name))))
 
 
 (defn make-children [parent-genome]
@@ -413,6 +424,45 @@
   (:mean (bench 1000 (fn [] (reduce #(inc %) 0 critter))))
   ;=> 0.832 ms
 
+  )
+
+
+; first make it possible
+; then make it pretty
+; then make it fast (if necessary)
+
+(defn scale-genome-from-dims
+  "generate a version of the supplied genome that would scale to
+  dimensions [dest-w dest-h], given its already-calculated dimensions"
+  [genome creature-w creature-h dest-w dest-h]
+  (-> genome
+      (update-gene :expansion-x #(* % (/ dest-w creature-w)))
+      (update-gene :expansion-y #(* % (/ dest-h creature-h)))
+      ))
+
+; more expensive version
+(defn scale-genome-to-fit
+  "generate a genome related to the given genome that has scale genes set to
+  fit within the desired area."
+  [genome w h]
+  (let [creature      (stream-creature genome)
+        [x0 y0 x1 y1] (measure-creature creature)
+        cx            (- x1 x0)
+        cy            (- y1 y0)
+        scalex        (/ w cx)
+        scaley        (/ h cy) ]
+    (scale-genome-from-dims genome (- x1 x0) (- y1 y0) w h)))
+
+
+(comment
+  (measure-creature (stream-creature (default-genome)))
+  ; [-51.21320343559642 0 51.21320343559643 81.21320343559643]
+  (-> (default-genome)
+      (scale-genome-to-fit 40 40)
+      stream-creature
+      measure-creature
+      )
+  ; [-20 0 20 40]
   )
 
 

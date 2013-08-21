@@ -72,13 +72,22 @@
   (.clip ctx))
 
 (defn render-creature [ctx x y creature]
-  (let [[center-x center-y] (gen/creature-centroid creature)]
+  (let [[x0 y0 x1 y1] (gen/measure-creature creature)
+        creature-w    (- x1 x0)
+        creature-h    (- y1 y0)
+        center-x      (/ (+ x0 x1) 2)
+        center-y      (/ (+ y0 y1) 2)
+        [cxcell cycell] (cell-dims ctx)
+        ]
     (-> ctx
         (m/save)
         ; could probably combine the translations
         (m/translate x y)
         (m/rotate Math/PI)
-        (m/translate (- center-x) (- center-y))))
+        (m/translate (- center-x) (- center-y)))
+    (when (or (> creature-w cxcell) (> creature-h cycell))
+      (log "applying scaling" (/ creature-w cxcell) (/ creature-h cycell))
+      (m/scale ctx (/ cxcell creature-w) (/ cycell creature-h))))
   (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
     (-> ctx
         (m/begin-path)
