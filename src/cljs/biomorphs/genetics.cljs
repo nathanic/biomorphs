@@ -377,6 +377,11 @@
                     (lazy-seq (stream-subtree genome [x' y']
                                               (turn-direction dir :right) (inc depth))))))))
 
+; i'm thinking i should look to stream-subtree for speed optimization
+; maybe do it without seqy business
+
+
+
 ; maybe call it creature-seq
 (defn stream-creature [genome]
   (stream-subtree genome [0 0] :n 0))

@@ -72,6 +72,24 @@
   (.clip ctx))
 
 (defn render-creature [ctx x y creature]
+  (let [[center-x center-y] (gen/creature-centroid creature)]
+    (-> ctx
+        (m/save)
+        ; could probably combine the translations
+        (m/translate x y)
+        (m/rotate Math/PI)
+        (m/translate (- center-x) (- center-y))))
+  (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
+    (-> ctx
+        (m/begin-path)
+        (m/stroke-style (apply hsla color))
+        (m/move-to x0 y0)
+        (m/line-to x1 y1)
+        (m/stroke)))
+  (m/restore ctx)
+  ctx)
+
+(defn render-creature-scaled [ctx x y creature]
   (let [[x0 y0 x1 y1] (gen/measure-creature creature)
         creature-w    (- x1 x0)
         creature-h    (- y1 y0)

@@ -23,11 +23,6 @@
 ; could render several intermediate states interpolated between the old and new genomes
 
 
-; IDEA: encode genome state in URL, for bookmarkable creatures
-; and to allow back button
-; or just pushState() and stash our state object
-; that way we can at least go back
-; it would also be cool to support middle-click to open a new tab at the desired state
 
 (defn render
   [state]
@@ -48,13 +43,16 @@
 (defn deserialize-state [ser-state]
   (cljs.reader/read-string ser-state))
 
-; working on some bookmarkability
+; it would also be cool to support middle-click to open a new tab at the desired state
+;
 (defn generate-location-hash [state]
   (apply str "#"
          (interpose
            ","
            (for [g (:genomes state)]
-             (str "[" (apply str (map (partial format "%3.4f,") g)) "]"))))
+             (str "["
+                  (apply str (map (partial format "%3.4f,") g))
+                  "]"))))
   )
 
 (defn parse-location-hash [state frag]
@@ -64,13 +62,7 @@
            :genomes (cljs.reader/read-string
                       (str "[" (subs frag 1) "]")))))
 
-(comment
-  (def genomes '([267.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [267.5999593064189 283.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [267.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 204.73172029294074] [249.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [249.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [267.5999593064189 265.17056196928024 -7.553424805495888 -2.145419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [249.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [285.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074] [249.5999593064189 265.17056196928024 -7.553424805495888 -1.245419395621866 -5.52927588718012 -4.165167430881411 10 0.8207923887530342 222.73172029294074]))
 
-  (parse-location-hash {} (generate-location-hash {:genomes genomes}))
-  )
-
-; TODO: also do some kind of hash encoding for bookmarkability?
 (defn push-state [state]
   (log "saving state:" (serialize-state state))
   (.pushState js/history (serialize-state state) "" (generate-location-hash state)))
@@ -150,7 +142,35 @@
     (m/stroke-style ctx "red")
     (m/stroke-rect ctx {:x 0, :y 0, :w cx, :h cy})
     (gfx/render-creature ctx (/ cx 2) (/ cy 2) (gen/stream-creature genome))
+    ))
 
+(defn- pre-draw [ctx]
+  (let [[cx cy] (gfx/canvas-dims ctx) ]
+    (gfx/clear-background ctx)
+    (m/stroke-style ctx "red")
+    (m/stroke-rect ctx {:x 0, :y 0, :w cx, :h cy})))
+
+
+(defn ^:export debug-scaling [canvas canvas-scaled genome]
+  (let [ctx         (m/get-context canvas "2d")
+        ctx-scaled  (m/get-context canvas-scaled "2d")
+        ; NB: lazily assuming identical canvas sizes
+        [cx cy]     (gfx/canvas-dims ctx)
+        agenome  (atom (or genome
+                           [65 25 1 1 1 1 9 0.9 180]))
+        draw-both  (fn []
+                     (pre-draw ctx)
+                     (pre-draw ctx-scaled)
+                     (let [creature (gen/stream-creature @agenome)]
+                       (gfx/render-creature ctx (/ cx 2) (/ cy 2) creature)
+                       (gfx/render-creature-scaled ctx-scaled (/ cx 2) (/ cy 2) creature)))
+        ]
+    (ev/listen (dom/getElement "randomize")
+               "click"
+               (fn []
+                 (reset! agenome (gen/random-genome))
+                 (draw-both)))
+    (draw-both)
     ))
 
 (defn try-genome [genome]

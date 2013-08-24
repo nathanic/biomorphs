@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<head>
+  <title>biomorphs</title>
+
+  <meta name="viewport" content="width=device-width, user-scalable=no" />
+
+  <script src="/webjars/jquery/1.9.1/jquery.js"></script>
+
+  <link rel="stylesheet" href="/webjars/jquery-ui-themes/1.10.0/ui-darkness/jquery-ui.css" />
+  <script src="/webjars/jquery-ui/1.10.2/ui/jquery-ui.js"></script>
+
+  <script src="/mondrian/js/jquery.ui.touch-punch.js"></script>
+
+  <link rel="stylesheet" href="/mondrian/css/mondrian.css" />
+
+  <script src="/js/biomorphs_dev.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+        biomorphs.biomorphs.debug_scaling($("#biomorphs-unscaled")[0], $("#biomorphs-scaled")[0]);
+
+        biomorphs.repl.connect();
+    });
+  </script>
+</head>
+
+<body>
+  <div>
+      <p>Unscaled</p>
+      <canvas id="biomorphs-unscaled" width="512" height="512"></canvas>
+  </div>
+  <div>
+      <p>Scaled</p>
+      <canvas id="biomorphs-scaled" width="512" height="512"></canvas>
+  </div>
+  <button id="randomize">Randomize Genome</button>
+</body>
