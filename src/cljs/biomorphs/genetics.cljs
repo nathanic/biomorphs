@@ -470,4 +470,43 @@
   ; [-20 0 20 40]
   )
 
+(defn- extreme-coords'
+  [[xmin ymin, xmax ymax] [x0 y0, x1 y1]]
+  [(if xmin (min xmin x0 x1) (min x0 x1))
+   (if ymin (min ymin y0 y1) (min y0 y1))
+   (if xmax (max xmax x0 x1) (max x0 x1))
+   (if ymax (max ymax y0 y1) (max y0 y1))
+    ])
 
+(defn- measure-subtree [extrema genome [x y] dir depth]
+  (if (< depth (get-genetic-iterations genome))
+    (let [[dx dy] (calc-branch-vector genome depth dir)
+          [x' y'] [(+ x dx) (+ y dy)]
+          ]
+      (-> extrema
+          (measure-subtree genome [x' y'] (turn-direction dir :left) (inc depth))
+          (measure-subtree genome [x' y'] (turn-direction dir :right) (inc depth))
+          (extreme-coords' [x y x' y'])))
+    extrema))
+
+
+(defn measure-creature-alt [genome]
+  (measure-subtree [nil nil nil nil] genome [0 0] :n 0))
+
+(comment
+  (= (measure-creature (stream-creature (default-genome)))
+     (measure-creature-alt (default-genome)))
+
+  (def g (default-genome))
+  (def gc (doall (stream-creature g)))
+  (count gc)
+
+  ; less trivial creature with 2047 body elements
+  (def g [103.2341,248.7688,4.2983,-2.6653,4.3936,0.4085,10.0000,0.9389,50.2353])
+
+  ; 11 ns for less trivial
+  (bench 1000 #(measure-creature gc))
+  ; 55 ns for less trivial
+  (bench 1000 #(measure-creature-alt g))
+
+  )

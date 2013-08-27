@@ -22,7 +22,12 @@
 ; what about morphing the creatures between genomes?
 ; could render several intermediate states interpolated between the old and new genomes
 
+; what about automatic evolution to match a given input picture?
 
+; protection against too-faint colors?
+
+; would it be faster to expand the genome for measurement
+; rather than creating and GC'ing the entire body?
 
 (defn render
   [state]
@@ -44,7 +49,7 @@
   (cljs.reader/read-string ser-state))
 
 ; it would also be cool to support middle-click to open a new tab at the desired state
-;
+; TODO: rewrite with clojure.string/join
 (defn generate-location-hash [state]
   (apply str "#"
          (interpose
@@ -150,25 +155,54 @@
     (m/stroke-style ctx "red")
     (m/stroke-rect ctx {:x 0, :y 0, :w cx, :h cy})))
 
+; construct a creature body that's an x in a box
+(defn- xbox [x0 y0 x1 y1]
+  (let [segs [[x0 y0, x1 y0, [120 50 50 1.0]]
+              [x0 y0, x0 y1, [140 50 50 1.0]]
+              [x1 y0, x1 y1, [160 50 50 1.0]]
+              [x0 y1, x1 y1, [170 50 50 1.0]]
+              [x0 y0, x1 y1, [180 50 50 1.0]]
+              [x1 y0, x0 y1, [200 50 50 1.0]]
+              ]]
+    (for [[a b c d col] segs]
+      {:color col
+       :x0 a, :y0 b,
+       :x1 c, :y1 d})))
+
+(defn xbox-at [center-x center-y]
+  (let [q 600]
+    (xbox (- center-x q) (+ center-y q)
+          (+ center-x q) (- center-y q))))
+
+(comment
+  (in-ns 'biomorphs.biomorphs)
+  (+ 2 2)
+  (xbox-at 0 0)
+  (xbox-at 1000 1000)
+  )
 
 (defn ^:export debug-scaling [canvas canvas-scaled genome]
   (let [ctx         (m/get-context canvas "2d")
         ctx-scaled  (m/get-context canvas-scaled "2d")
         ; NB: lazily assuming identical canvas sizes
         [cx cy]     (gfx/canvas-dims ctx)
-        agenome  (atom (or genome
-                           [65 25 1 1 1 1 9 0.9 180]))
+        the-state   (atom {:genomes [(or genome
+                                         [65 25 1 1 1 1 9 0.9 180])]})
         draw-both  (fn []
                      (pre-draw ctx)
                      (pre-draw ctx-scaled)
-                     (let [creature (gen/stream-creature @agenome)]
+                     (let [creature (xbox-at 300 300)
+                                     #_(gen/stream-creature (-> @the-state :genomes first))]
                        (gfx/render-creature ctx (/ cx 2) (/ cy 2) creature)
                        (gfx/render-creature-scaled ctx-scaled (/ cx 2) (/ cy 2) creature)))
         ]
-    (ev/listen (dom/getElement "randomize")
-               "click"
+    (when (not-empty (.-hash js/location))
+      (swap! the-state merge (parse-location-hash @the-state (.-hash js/location))))
+    (ev/listen (dom/getElement "redraw") "click" #(draw-both))
+    (ev/listen (dom/getElement "randomize") "click"
                (fn []
-                 (reset! agenome (gen/random-genome))
+                 (swap! the-state assoc :genomes [(gen/random-genome)])
+                 (push-state @the-state)
                  (draw-both)))
     (draw-both)
     ))

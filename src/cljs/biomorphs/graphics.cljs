@@ -90,31 +90,28 @@
   ctx)
 
 (defn render-creature-scaled [ctx x y creature]
-  (let [[x0 y0 x1 y1] (gen/measure-creature creature)
-        creature-w    (- x1 x0)
-        creature-h    (- y1 y0)
-        center-x      (/ (+ x0 x1) 2)
-        center-y      (/ (+ y0 y1) 2)
+  (let [[x0 y0 x1 y1]   (gen/measure-creature creature)
+        creature-w      (- x1 x0)
+        creature-h      (- y1 y0)
+        center-x        (/ (+ x0 x1) 2)
+        center-y        (/ (+ y0 y1) 2)
         [cxcell cycell] (cell-dims ctx)
         ]
     (-> ctx
         (m/save)
-        ; could probably combine the translations
         (m/translate x y)
-        (m/rotate Math/PI)
-        (m/translate (- center-x) (- center-y)))
+        (m/rotate Math/PI))
     (when (or (> creature-w cxcell) (> creature-h cycell))
-      (log "applying scaling" (/ creature-w cxcell) (/ creature-h cycell))
-      (m/scale ctx (/ cxcell creature-w) (/ cycell creature-h))))
-  (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
-    (-> ctx
-        (m/begin-path)
-        (m/stroke-style (apply hsla color))
-        (m/move-to x0 y0)
-        (m/line-to x1 y1)
-        (m/stroke)))
-  (m/restore ctx)
-  ctx)
+      (m/scale ctx (/ cxcell creature-w) (/ cycell creature-h)))
+    (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
+      (-> ctx
+          (m/begin-path)
+          (m/stroke-style (apply hsla color))
+          (m/move-to (- x0 center-x) (- y0 center-y))
+          (m/line-to (- x1 center-x) (- y1 center-y))
+          (m/stroke)))
+    (m/restore ctx)
+    ctx))
 
 
 ; what about three.js and webgl?
@@ -128,7 +125,7 @@
         (bounding-box ctx x y cxcell cycell)
         (m/save ctx)
         (clip-box ctx x y cxcell cycell)
-        (render-creature ctx
+        (render-creature-scaled ctx
                          (+ x (/ cxcell 2))
                          (+ y (/ cycell 2))
                          creature)
