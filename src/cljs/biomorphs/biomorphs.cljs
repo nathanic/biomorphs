@@ -5,6 +5,7 @@
             [biomorphs.utils :refer [log]]
             [goog.events :as ev]
             [goog.dom :as dom]
+            [clojure.string :refer [join]]
             ))
 
 ;; UI Ideas
@@ -49,16 +50,13 @@
   (cljs.reader/read-string ser-state))
 
 ; it would also be cool to support middle-click to open a new tab at the desired state
-; TODO: rewrite with clojure.string/join
 (defn generate-location-hash [state]
-  (apply str "#"
-         (interpose
-           ","
-           (for [g (:genomes state)]
-             (str "["
-                  (apply str (map (partial format "%3.4f,") g))
-                  "]"))))
-  )
+  (str "#"
+       (join ","
+             (for [g (:genomes state)]
+               (str "["
+                    (join "," (map (partial format "%3.4f") g))
+                    "]")))))
 
 (defn parse-location-hash [state frag]
   (if (empty? frag)
