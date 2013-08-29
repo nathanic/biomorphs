@@ -135,22 +135,6 @@
   (and (= (count genome) (count GENOTYPE))
        (every? number? genome)))
 
-(comment
-  (default-genome)
-  (random-genome)
-  (in-ns 'biomorphs.genetics)
-  (def g (default-genome))
-  (bench 1000000 #(get-gene g :color))
-  ;=> 0.688 ns
-  (bench 1000000 #(get-genetic-angle g :se))
-  ;=> 3.57 ns
-
-  (bench 1000000 #(get-genetic-expansion g))
-  ;=> 1.397 ns
-
-  (bench 1000000 #(get-genetic-gradient g 5))
-  ;=> 1.467 ns
-  )
 
 (comment
   (defn fixup-gene [gdef gval]
@@ -197,18 +181,25 @@
          (f (get-gene genome gene-name))))
 
 
-(defn make-children [parent-genome]
-  (for [_ (range CHILD-COUNT)]
-    (mutate-genome parent-genome)))
+(comment
+  (defn make-children [parent-genome]
+    (for [_ (range CHILD-COUNT)]
+      (mutate-genome parent-genome)))
+  )
 
 ; lame way to ensure uniqueness...
 ; hopefully i'll think of something better later.
-(defn make-children-unique [parent-genome]
+(defn make-children [parent-genome]
   (loop [children #{}]
     (if (< (count children) CHILD-COUNT)
       (recur (conj children (mutate-genome parent-genome)))
       (vec children))))
 
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Interpolation for Animation
 
 (defn- interpolate-gene
   [coeff a b]
@@ -432,31 +423,31 @@
   )
 
 
-; first make it possible
-; then make it pretty
-; then make it fast (if necessary)
+(comment
 
-(defn scale-genome-from-dims
-  "generate a version of the supplied genome that would scale to
-  dimensions [dest-w dest-h], given its already-calculated dimensions"
-  [genome creature-w creature-h dest-w dest-h]
-  (-> genome
-      (update-gene :expansion-x #(* % (/ dest-w creature-w)))
-      (update-gene :expansion-y #(* % (/ dest-h creature-h)))
-      ))
+  (defn scale-genome-from-dims
+    "generate a version of the supplied genome that would scale to
+    dimensions [dest-w dest-h], given its already-calculated dimensions"
+    [genome creature-w creature-h dest-w dest-h]
+    (-> genome
+        (update-gene :expansion-x #(* % (/ dest-w creature-w)))
+        (update-gene :expansion-y #(* % (/ dest-h creature-h)))
+        ))
 
-; more expensive version
-(defn scale-genome-to-fit
-  "generate a genome related to the given genome that has scale genes set to
-  fit within the desired area."
-  [genome w h]
-  (let [creature      (stream-creature genome)
-        [x0 y0 x1 y1] (measure-creature creature)
-        cx            (- x1 x0)
-        cy            (- y1 y0)
-        scalex        (/ w cx)
-        scaley        (/ h cy) ]
-    (scale-genome-from-dims genome (- x1 x0) (- y1 y0) w h)))
+  ; more expensive version
+  (defn scale-genome-to-fit
+    "generate a genome related to the given genome that has scale genes set to
+    fit within the desired area."
+    [genome w h]
+    (let [creature      (stream-creature genome)
+          [x0 y0 x1 y1] (measure-creature creature)
+          cx            (- x1 x0)
+          cy            (- y1 y0)
+          scalex        (/ w cx)
+          scaley        (/ h cy) ]
+      (scale-genome-from-dims genome (- x1 x0) (- y1 y0) w h)))
+
+  )
 
 
 (comment
