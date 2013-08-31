@@ -13,7 +13,9 @@
   <script type="text/javascript">
     $(document).ready(function () {
         biomorphs.biomorphs.init($('.biomorphs').toArray());
-        biomorphs.repl.connect();
+        if(biomorphs.repl) {
+            biomorphs.repl.connect();
+        }
     });
   </script>
 </head>

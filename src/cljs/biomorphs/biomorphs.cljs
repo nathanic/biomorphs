@@ -69,6 +69,8 @@
                     "]")))))
 
 (defn parse-location-hash [state frag]
+  ; XXX what if we have a mismatch between parsed genomes and available canvi?
+  ; TODO generate offspring of first genome to fill gaps
   (if (empty? frag)
     state
     (assoc state
@@ -86,6 +88,7 @@
   (cond
     (.-state evt)
     (do (.log js/console "restoring state from pop" (.-state evt))
+        ; TODO see comment in parse-location-hash
         (swap! the-state merge (deserialize-state (.-state evt)))
         (render @the-state)),
     ))
@@ -94,8 +97,6 @@
 
 (defn on-click-canvas
   [the-state evt]
-  ; in the new regime, need a mapping from canvas to index
-  ; can we just search for it in :contexts?
   (let [{:keys [contexts genomes]}  @the-state
         pos                         (offset-pos evt)
         target-ctx                  (m/get-context (.-target evt) "2d")
@@ -129,9 +130,6 @@
     (when (not-empty (.-hash js/location))
       (let [state @the-state]
         (log "restoring state from location hash")
-        ; XXX what if we have fewer hash genomes than canvi?
-        ; could fill the rest with random children of the first one
-        ; if more hash genomes than canvi, need to truncate them
         (swap! the-state merge (parse-location-hash state (.-hash js/location)))))
     (when (and js/document (.-getElementById js/document))
       ; will need to bind click handlers to all canvi
@@ -202,8 +200,12 @@
 (defn ^:export debug-animation [canvas genome-a genome-b]
   (let [ctx      (m/get-context canvas "2d")
         [cx cy]  (gfx/canvas-dims ctx)
-        genome-a (or genome-a [65 25 1 1 1 1 9 0.9 180])
-        genome-b (or genome-b [120 120 1 4 1 1 9 0.9 180])
+        genome-a (or genome-a 
+                     [109.8498,308.7442,-2.6838,-3.8789,8.0192,-1.7244,9.8865,1.0608,104.7208]
+                     [65 25 1 1 1 1 9 0.9 180])
+        genome-b (or genome-b 
+                     [208.5745,318.0857,-7.4932,-5.5968,-0.2429,3.6921,7.4762,1.0930,140.3989]
+                     [120 120 1 4 1 1 9 0.9 180])
         the-state (atom
                     {:genomes  [genome-a genome-b]
                      :contexts [(m/get-context canvas "2d")] }) ]

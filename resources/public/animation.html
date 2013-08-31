@@ -1,17 +1,12 @@
 <!DOCTYPE html>
 <head>
-  <title>biomorphs</title>
+  <title>Biomorphs in ClojureScript</title>
 
   <meta name="viewport" content="width=device-width, user-scalable=no" />
 
   <script src="/webjars/jquery/1.9.1/jquery.js"></script>
 
-  <link rel="stylesheet" href="/webjars/jquery-ui-themes/1.10.0/ui-darkness/jquery-ui.css" />
-  <script src="/webjars/jquery-ui/1.10.2/ui/jquery-ui.js"></script>
-
-  <script src="/mondrian/js/jquery.ui.touch-punch.js"></script>
-
-  <link rel="stylesheet" href="/mondrian/css/mondrian.css" />
+  <link rel="stylesheet" href="css/biomorphs.css" />
 
   <script src="/js/biomorphs_dev.js"></script>
 
@@ -23,14 +18,17 @@
             biomorphs.biomorphs.debug_animation(this);
         });
 
-        biomorphs.repl.connect();
+        if(biomorphs.repl) {
+            biomorphs.repl.connect();
+        }
     });
   </script>
 </head>
 
 <body>
-  <button id="randomize">Randomize Population</button>
-  <div>
-    <canvas class="biomorphs" width="1024" height="1024"></canvas>
-  </div>
+    <h1>Biomorphs Animation Demo</h1>
+    <button id="randomize">Randomize Population</button>
+    <div>
+        <canvas class="biomorphs" width="1024" height="1024"></canvas>
+    </div>
 </body>
