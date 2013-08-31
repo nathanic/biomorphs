@@ -1,4 +1,4 @@
-(ns biomorphs.biomorphs
+(ns biomorphs.app
   (:require [monet.canvas :as m]
             [biomorphs.graphics :as gfx]
             [biomorphs.genetics :as gen]
@@ -27,12 +27,6 @@
 
 ; protection against too-faint colors?
 
-; would it be faster to expand the genome for measurement
-; rather than creating and GC'ing the entire body?
-
-; macro idea: (for-zip [a as, b bs] (forms ...))
-; the zipmap equivalent of for
-; maybe call it zipfor?
 
 
 (defn render

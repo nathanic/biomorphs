@@ -45,14 +45,13 @@
   :ring {:handler biomorphs.server/app}
 
   ; keep prod build in another lein profile so we don't need to wait on it all the time
-  :profiles {:prod {:cljsbuild 
-                    {:builds 
-                     {:prod 
+  :profiles {:prod {:cljsbuild
+                    {:builds
+                     {:prod
                       {:source-paths ["src/cljs"]
                        :compiler {:output-to "target/resources/public/js/biomorphs.js"
                                   :optimizations :advanced
-                                  :externs ["externs/jquery-1.9.js"
-                                            "externs/jquery-ui.js"]
+                                  :externs ["externs/jquery-1.9.js"]
                                   :pretty-print false}}
                       }}}}
 
