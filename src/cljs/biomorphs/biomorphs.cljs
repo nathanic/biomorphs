@@ -2,11 +2,11 @@
   (:require [monet.canvas :as m]
             [biomorphs.graphics :as gfx]
             [biomorphs.genetics :as gen]
-            [biomorphs.utils :refer [log]]
+            [biomorphs.utils :refer [index-of log]]
             [goog.events :as ev]
             [goog.dom :as dom]
-            [clojure.string :refer [join]]
-            ))
+            [clojure.string :refer [join]])
+  (:require-macros [biomorphs.macros :refer [forloop for-indexes]]))
 
 ;; UI Ideas
 ;; genome bar plot
@@ -30,10 +30,20 @@
 ; would it be faster to expand the genome for measurement
 ; rather than creating and GC'ing the entire body?
 
+; macro idea: (for-zip [a as, b bs] (forms ...))
+; the zipmap equivalent of for
+; maybe call it zipfor?
+
+
 (defn render
-  [state]
-  (gfx/clear-background (:ctx state))
-  (gfx/render-creatures state))
+  [{:keys [genomes contexts] :as state}]
+  {:pre [(vector? genomes)
+         (vector? contexts)
+         (= (count genomes) (count contexts)) ]}
+  (for-indexes [i genomes]
+    (gfx/render-creature
+      (get contexts i)
+      (gen/stream-creature (get genomes i)))))
 
 (defn offset-pos
   [evt]
@@ -43,8 +53,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; pushState support
 (defn serialize-state [state]
-  ; can't serialize canvas context
-  (pr-str (dissoc state :ctx)))
+  ; can't serialize canvas contexts
+  (pr-str (dissoc state :contexts)))
 
 (defn deserialize-state [ser-state]
   (cljs.reader/read-string ser-state))
@@ -81,15 +91,18 @@
     ))
 
 
+
 (defn on-click-canvas
   [the-state evt]
-  (log "canvas has been clicked offset " (offset-pos evt))
-  (let [{:keys [ctx genomes]}   @the-state
-        pos                     (offset-pos evt)
-        idx                     (gfx/pos-to-index-from-ctx ctx pos)
-        new-parent              (nth genomes idx) ]
-    (swap! the-state
-           assoc :genomes (cons new-parent (gen/make-children new-parent))))
+  ; in the new regime, need a mapping from canvas to index
+  ; can we just search for it in :contexts?
+  (let [{:keys [contexts genomes]}  @the-state
+        pos                         (offset-pos evt)
+        target-ctx                  (m/get-context (.-target evt) "2d")
+        idx                         (index-of contexts target-ctx)
+        new-parent                  (get genomes idx) ]
+    (log "canvas" idx "has been clicked at offset" (offset-pos evt))
+    (swap! the-state assoc :genomes (gen/reproduce new-parent (count genomes))))
   (render @the-state)
   (push-state @the-state)
   )
@@ -99,29 +112,32 @@
   (log "randomize button clicked")
   (swap! the-state
          update-in [:genomes]
-         (fn [gs] (map #(gen/random-genome) gs)))
+         (fn [gs] (mapv #(gen/random-genome) gs)))
   (push-state @the-state)
   (render @the-state)
   )
 
 ; called from an inline <script>
-(defn ^:export init [canvas]
+(defn ^:export init [canvi]
   (log "init start")
   (let [parent    (gen/default-genome)
         the-state (atom
-                    {:genomes  (cons parent (gen/make-children parent))
-                     ;; when we switch to multi-canvas,
-                     ;; we'll need a vector of contexts
-                     :ctx      (m/get-context canvas "2d")
+                    {:genomes  (gen/reproduce parent (count canvi))
+                     :contexts (mapv #(m/get-context % "2d") canvi)
                      })
         ]
     (when (not-empty (.-hash js/location))
       (let [state @the-state]
         (log "restoring state from location hash")
+        ; XXX what if we have fewer hash genomes than canvi?
+        ; could fill the rest with random children of the first one
+        ; if more hash genomes than canvi, need to truncate them
         (swap! the-state merge (parse-location-hash state (.-hash js/location)))))
-    (when (and js/document
-               (.-getElementById js/document))
-      (ev/listen canvas "click" (partial on-click-canvas the-state))
+    (when (and js/document (.-getElementById js/document))
+      ; will need to bind click handlers to all canvi
+      ; could actually just pass in the selector and find the elements here...
+      (doseq [canvas canvi]
+        (ev/listen canvas "click" (partial on-click-canvas the-state)))
       (ev/listen js/window "popstate" (partial on-popstate the-state))
       (ev/listen (dom/getElement "randomize")
                  "click"
@@ -145,7 +161,7 @@
     (gfx/clear-background ctx)
     (m/stroke-style ctx "red")
     (m/stroke-rect ctx {:x 0, :y 0, :w cx, :h cy})
-    (gfx/render-creature ctx (/ cx 2) (/ cy 2) (gen/stream-creature genome))
+    (gfx/render-creature ctx  (gen/stream-creature genome))
     ))
 
 
@@ -190,7 +206,7 @@
         genome-b (or genome-b [120 120 1 4 1 1 9 0.9 180])
         the-state (atom
                     {:genomes  [genome-a genome-b]
-                     :ctx      (m/get-context canvas "2d") }) ]
+                     :contexts [(m/get-context canvas "2d")] }) ]
     (ev/listen (dom/getElement "randomize")
                "click"
                (fn []
@@ -202,8 +218,7 @@
                                    ANIMATION-DURATION
                                    (fn [genome]
                                      (gfx/clear-background ctx)
-                                     (gfx/render-creature ctx (/ cx 2) (/ cy 2)
-                                                          (gen/stream-creature genome)))
+                                     (gfx/render-creature ctx (gen/stream-creature genome)))
                                    )
                    )))
     (gfx/clear-background ctx)
@@ -211,8 +226,7 @@
            (animate-genome genome-a genome-b ANIMATION-DURATION
                     (fn [genome]
                       (gfx/clear-background ctx)
-                      (gfx/render-creature ctx (/ cx 2) (/ cy 2)
-                                           (gen/stream-creature genome)))
+                      (gfx/render-creature ctx (gen/stream-creature genome)))
                     ))))
 
 

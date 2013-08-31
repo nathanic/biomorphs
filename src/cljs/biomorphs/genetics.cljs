@@ -182,20 +182,25 @@
 
 
 (comment
-  (defn make-children [parent-genome]
+  (defn- make-children [parent-genome]
     (for [_ (range CHILD-COUNT)]
       (mutate-genome parent-genome)))
   )
 
 ; lame way to ensure uniqueness...
 ; hopefully i'll think of something better later.
-(defn make-children [parent-genome]
+(defn- make-children [parent-genome n]
   (loop [children #{}]
-    (if (< (count children) CHILD-COUNT)
+    (if (< (count children) n)
       (recur (conj children (mutate-genome parent-genome)))
       (vec children))))
 
-
+(defn reproduce 
+  "given a parent genome, create a new vector with it at the head,
+  and fill the rest of the vector with mutant offspring until there 
+  are `population-size` in it.  "
+  [parent population-size]
+  (into [parent] (make-children parent (dec population-size))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

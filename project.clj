@@ -1,22 +1,18 @@
 (defproject biomorphs "0.1.0-SNAPSHOT"
-  :description "mondrian-based interactive artwork"
-  :url "http://example.com/FIXME"
+  :description "Biomorphs in ClojureScript"
+  :url "http://github.com/nathanic/biomorphs/"
   :license {:name "BSD"
             :url "http://www.opensource.org/licenses/BSD-3-Clause"
             :distribution :repo }
 
   :dependencies [[org.clojure/clojure "1.5.1"]
+                 ; TODO: austin
                  [com.cemerick/piggieback "0.0.4"]
                  [compojure "1.1.5"]
-                 [mondrian "0.1.1"]
                  [ring "1.1.8"]
                  [rm-hull/monet "0.1.7"]
                  [jayq "2.4.0"]
-
-                 ; let's try domina then
-                 ;; [domina "1.0.0"]
-                 ;; [org.clojure/google-closure-library-third-party "0.0-2029"]
-
+                 [org.webjars/jquery "1.9.1"]
                  [core.async "0.1.0-SNAPSHOT"]
                  ;; [org.clojure/core.async "0.1.0-SNAPSHOT"]
                  ]

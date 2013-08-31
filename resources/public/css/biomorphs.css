@@ -1,0 +1,24 @@
+body {
+    color: #ccc;
+    background-color: rgb(25,29,33);
+}
+
+/* TODO: css to establish 9x9 grid */
+
+canvas.biomorphs {
+    border: 1px solid #666;
+    padding: 1px;
+    margin: 0;
+
+    /* NB: setting size in html instead of css to avoid scaling
+     * http://stackoverflow.com/questions/4938346/canvas-width-and-height-in-html5
+     */
+}
+
+canvas.biomorphs:hover {
+    border: 1px solid red;
+}
+
+canvas.biomorphs:active {
+    border: 1px solid green;
+}

@@ -23,69 +23,34 @@
   (let [canvas (.-canvas ctx)]
     [(.-width canvas) (.-height canvas)]))
 
-(defn cell-dims [ctx]
-  (let [width     (.-width (.-canvas ctx))
-        cxcell    (int (/ width 3))
-        cycell    cxcell  ;; should probably really base this on height
-        ]
-    [cxcell cycell]))
-
-
-(defn pos-from-index [n canvas-width cell-width cell-height]
-  (let [per-row (int (/ canvas-width cell-width))
-        row     (int (/ n per-row))
-        col     (int (mod n per-row))]
-    [(* col cell-width) (* row cell-height)]))
-
-; use this for mouse event handlers
-(defn pos-to-index [[x y] canvas-width cell-width cell-height]
-  (let [per-row (int (/ canvas-width cell-width))
-        col     (int (/ x cell-width))
-        row     (int (/ y cell-height) )
-        ]
-    (+ col (* row per-row))
-    ))
-
-; i think this one is currently unused
-(defn pos-to-index-from-ctx
-  [ctx pos]
-  (let [[w _]   (canvas-dims ctx)
-        [cx cy] (cell-dims ctx) ]
-    (pos-to-index pos w cx cy)))
-
-
-(defn bounding-box [ctx x y cx cy]
-  (-> ctx
-      (m/begin-path)
-      (m/move-to x y)
-      (m/line-to (+ x cx) y)
-      (m/line-to (+ x cx) (+ cy y))
-      (m/line-to x (+ cy y))
-      (m/line-to x y)
-      (m/stroke-style "red")
-      (m/stroke))
-  ctx)
-
 (defn clip-box  [ctx x y cx cy]
   (m/begin-path ctx)
   (.rect ctx x y cx cy)
   (.clip ctx))
 
+(defn clear-background [ctx]
+  (let [[w h] (canvas-dims ctx)]
+    (-> ctx
+        (m/fill-style "rgb(25,29,33)")
+        (m/fill-rect {:x 0 :y 0 :w w :h h}))))
 
-(defn render-creature [ctx x y creature]
-  (let [[x0 y0 x1 y1]   (gen/measure-creature creature)
-        creature-w      (- x1 x0)
-        creature-h      (- y1 y0)
-        center-x        (/ (+ x0 x1) 2)
-        center-y        (/ (+ y0 y1) 2)
-        [cxcell cycell] (cell-dims ctx)
+; what about three.js/webgl instead?
+(defn render-creature [ctx creature]
+  {:pre [ctx creature]}
+  (let [[x0 y0 x1 y1]       (gen/measure-creature creature)
+        creature-w          (- x1 x0)
+        creature-h          (- y1 y0)
+        center-x            (/ (+ x0 x1) 2)
+        center-y            (/ (+ y0 y1) 2)
+        [canvas-w canvas-h] (canvas-dims ctx)
         ]
+    (clear-background ctx)
     (-> ctx
         (m/save)
-        (m/translate x y)
+        (m/translate (/ canvas-w 2) (/ canvas-h 2))
         (m/rotate Math/PI))
-    (when (or (> creature-w cxcell) (> creature-h cycell))
-      (m/scale ctx (/ cxcell creature-w) (/ cycell creature-h)))
+    (when (or (> creature-w canvas-w) (> creature-h canvas-h))
+      (m/scale ctx (/ canvas-w creature-w) (/ canvas-h creature-h)))
     (doseq [{:keys [x0 y0 x1 y1 color]} creature ]
       (-> ctx
           (m/begin-path)
@@ -97,29 +62,5 @@
     ctx))
 
 
-; what about three.js and webgl?
-(defn render-creatures
-  [{:keys [ctx genomes]}]
-  (let [width           (.-width (.-canvas ctx))
-        [cxcell cycell] (cell-dims ctx)
-        creatures       (map gen/stream-creature genomes) ]
-    (doseq [[n creature] (map-indexed vector creatures)]
-      (let [[x y] (pos-from-index n width cxcell cycell)]
-        (bounding-box ctx x y cxcell cycell)
-        (m/save ctx)
-        (clip-box ctx x y cxcell cycell)
-        (render-creature ctx
-                         (+ x (/ cxcell 2))
-                         (+ y (/ cycell 2))
-                         creature)
-        (m/restore ctx)
-        ))))
 
-
-(defn clear-background [ctx]
-  (let [[w h] (canvas-dims ctx)]
-    (-> ctx
-        ;; (m/fill-style "rgba(25,29,33,0.75)") ;; Alpha adds motion blur
-        (m/fill-style "rgb(25,29,33)")
-        (m/fill-rect {:x 0 :y 0 :w w :h h}))))
 
