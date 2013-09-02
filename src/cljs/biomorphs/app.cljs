@@ -2,7 +2,7 @@
   (:require [monet.canvas :as m]
             [biomorphs.graphics :as gfx]
             [biomorphs.genetics :as gen]
-            [biomorphs.utils :refer [index-of log]]
+            [biomorphs.utils :refer [index-of log now]]
             [goog.events :as ev]
             [goog.dom :as dom]
             [clojure.string :refer [join]])
@@ -51,7 +51,10 @@
   (pr-str (dissoc state :contexts)))
 
 (defn deserialize-state [ser-state]
-  (cljs.reader/read-string ser-state))
+  ; coerce :genomes to be a vector, which we rely on elsewhere
+  (update-in (cljs.reader/read-string ser-state)
+             [:genomes]
+             vec))
 
 ; it would also be cool to support middle-click to open a new tab at the desired state
 (defn generate-location-hash [state]
@@ -146,23 +149,15 @@
 (defn ^:export debug-single-biomorph [canvas genome]
   (let [ctx     (m/get-context canvas "2d")
         [cx cy] (gfx/canvas-dims ctx)
-        genome  (or genome
-                    [65 25 1 1 1 1 9 0.9 180]
-                    #_(gen/default-genome))
+        genome  (or genome [65 25 1 1 1 1 9 0.9 180])
         ]
-    (gfx/clear-background ctx)
-    (m/stroke-style ctx "red")
-    (m/stroke-rect ctx {:x 0, :y 0, :w cx, :h cy})
-    (gfx/render-creature ctx  (gen/stream-creature genome))
-    ))
+    (gfx/render-creature ctx  (gen/stream-creature genome))))
 
-
-
+; debug helper
 (defn try-genome [genome]
   (debug-single-biomorph (dom/getElementByClass "biomorphs") genome))
 
 
-(defn now [] (.getTime (js/Date.)))
 
 ;; this works, but morphing all genes at once can be  a bit discontinuous-looking
 ;; my guess is that scaling the gradient is part of that.
@@ -213,21 +208,18 @@
                                    (gen/random-genome)
                                    ANIMATION-DURATION
                                    (fn [genome]
-                                     (gfx/clear-background ctx)
                                      (gfx/render-creature ctx (gen/stream-creature genome)))
                                    )
                    )))
-    (gfx/clear-background ctx)
     (swap! the-state assoc :anim-req-id
            (animate-genome genome-a genome-b ANIMATION-DURATION
                     (fn [genome]
-                      (gfx/clear-background ctx)
                       (gfx/render-creature ctx (gen/stream-creature genome)))
                     ))))
 
 
 (comment
-  (in-ns 'biomorphs.biomorphs)
+  (in-ns 'biomorphs.app)
   (map :name gen/GENOTYPE)
   (try-genome [45 45 1 1 1 1 3 0.9 180])
   (try-genome [120 120 1 4 1 1 9 0.9 180]) (try-genome [45 45 2 1 1 1 9 0.8 180])

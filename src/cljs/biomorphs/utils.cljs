@@ -138,13 +138,15 @@
     out))
 
 
+(defn now [] (.getTime (js/Date.)))
+
 (defn bench
   "simple benchmarking function"
   [iters f]
-    (let [start   (.getTime (js/Date.))
+    (let [start   (now)
           result  (f)
           _       (dotimes [_ (dec iters)] (f))
-          end     (.getTime (js/Date.))
+          end     (now)
           elapsed (- end start)]
       {:result  result,
        :elapsed elapsed,
