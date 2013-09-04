@@ -53,15 +53,19 @@
    {:name    :expansion-x
     :index   4
     :default 1.0
-    :min     -9.0
-    :max     9.0
+    ;; :min     -9.0
+    ;; :max     9.0
+    :min -2.0
+    :max 2.0
     ; general width scale factor
     }
    {:name    :expansion-y
     :index   5
     :default 1.0
-    :min     -9.0
-    :max     9.0
+    ;; :min     -9.0
+    ;; :max     9.0
+    :min -2.0
+    :max 2.0
     ; general height scale factor
     }
    {:name    :iterations
@@ -195,9 +199,9 @@
       (recur (conj children (mutate-genome parent-genome)))
       (vec children))))
 
-(defn reproduce 
+(defn reproduce
   "given a parent genome, create a new vector with it at the head,
-  and fill the rest of the vector with mutant offspring until there 
+  and fill the rest of the vector with mutant offspring until there
   are `population-size` in it.  "
   [parent population-size]
   (into [parent] (make-children parent (dec population-size))))
@@ -281,13 +285,17 @@
   ; 0 iterations -> still one branching
   (Math/pow (get-gene genome :gradient) depth))
 
+(defn- wraparound [x limit]
+  (- x (Math/floor x)))
 
 ; this could stand to be a bit more dramatic
 (defn get-genetic-color
   "the color will be the hue gene, with lightness and alpha affected by the gradient gene, returns an hsla 4-vector"
   [genome depth]
   (let [grad (get-genetic-gradient genome depth)]
-    [(* grad (get-gene genome :hue)) (* 1.0) (* grad 0.5) (* 1.0)]
+    ;; [(* grad (get-gene genome :hue)) (* 1.0) (* grad 0.5) (* 1.0)]
+    ;; [(* grad (get-gene genome :hue)) (* 1.0) (* 0.5) (* 1.0)]
+    [(* grad (get-gene genome :hue)) (* 1.0) (wraparound (* grad 0.5) 1.0) (* 1.0)]
     ))
 
 ; TODO? normalize angle to [0,360)
@@ -508,4 +516,15 @@
   ; 55 ns for less trivial
   (bench 1000 #(measure-creature-alt g))
 
+  )
+
+(comment
+  (defn genome-to-map [genome]
+    (into
+      {}
+      (for [n (range (count genome))]
+        {(-> GENOTYPE (get n) :name )
+         (get genome n)})))
+
+  (genome-to-map [341.8495,141.8539,4.2230,-3.9680,-2.4286,7.8450,9.2944,0.8482,257.1308])
   )
