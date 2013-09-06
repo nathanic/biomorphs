@@ -146,16 +146,23 @@
 
 
 ; temporary debug hooks, for use with single.html
-(defn ^:export debug-single-biomorph [canvas genome]
+(defn ^:export debug-single-biomorph [canvas canvas-genome genome]
   (let [ctx     (m/get-context canvas "2d")
         [cx cy] (gfx/canvas-dims ctx)
-        genome  (or genome [65 25 1 1 1 1 9 0.9 180])
+        genome  (or genome 
+                    [163.8498,308.7442,-2.6838,-4.7789,8.9192,-0.8244,9.8865,1.0608,104.7208]
+                    [65 25 1 1 1 1 9 0.9 180]
+                    )
         ]
-    (gfx/render-creature ctx  (gen/stream-creature genome))))
+    (gfx/render-creature ctx (gen/stream-creature genome))
+    (gfx/render-genome (m/get-context canvas-genome "2d") genome)
+    ))
 
 ; debug helper
 (defn try-genome [genome]
-  (debug-single-biomorph (dom/getElementByClass "biomorphs") genome))
+  (debug-single-biomorph (dom/getElementByClass "biomorphs") 
+                         (dom/getElementByClass "biomorphs-genome")
+                         genome))
 
 
 

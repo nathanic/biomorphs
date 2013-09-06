@@ -61,6 +61,43 @@
     (m/restore ctx)
     ctx))
 
+(defn render-gene
+  [ctx x y w h {:keys [fraction]}]
+  (let [pixline (+ y (* fraction h))]
+    (-> ctx
+        (m/fill-style "blue")
+        (m/stroke-rect {:x x, :y y, :w w, :h h})
+        (m/fill-rect {:x x, :y pixline, :w w, :h (- h pixline)})
+        ;; (m/fill-style "black")
+        ;; (m/fill-rect {:x x, :y y, :w w, :h pixline})
+        )))
 
+(defn render-genome 
+  "render a visualization of the genome itself,
+  filling the supplied canvas context completely"
+  [ctx genome]
+  (let [vizes   (gen/genome-visualization genome)
+        [w h]   (canvas-dims ctx)
+        gene-w  (/ w (count genome)) ]
+    (dotimes [n (count genome)]
+      (render-gene ctx (* n gene-w) 0 gene-w h (get vizes n))
+      )
+    )
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; graphics ideas
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; we get asymmetry from depth-first drawing
+;   might want to switch to breadth-first
+; large :expansion genes lead to lots of the lines falling below nyquist
+;   and very faint looking creatures
+;   could do scaling myself,
+;     and not use (scale),
+;     but the varying line width was sometimes interesting visually
+;   could just vary line width myself
+; could do a more interesting job of picking colors
+;   http://devmag.org.za/2012/07/29/how-to-choose-colours-procedurally-algorithms/
+;   https://news.ycombinator.com/item?id=6309989
 
 

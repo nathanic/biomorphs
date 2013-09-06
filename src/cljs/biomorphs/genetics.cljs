@@ -137,7 +137,9 @@
 
 (defn valid-genome? [genome]
   (and (= (count genome) (count GENOTYPE))
-       (every? number? genome)))
+       (every? number? genome))
+  ; TODO: verify genes are within proper ranges
+  )
 
 
 (comment
@@ -519,12 +521,43 @@
   )
 
 (comment
-  (defn genome-to-map [genome]
+  (defn genome->map [genome]
     (into
       {}
       (for [n (range (count genome))]
         {(-> GENOTYPE (get n) :name )
          (get genome n)})))
 
-  (genome-to-map [341.8495,141.8539,4.2230,-3.9680,-2.4286,7.8450,9.2944,0.8482,257.1308])
+  (genome->map [341.8495,141.8539,4.2230,-3.9680,-2.4286,7.8450,9.2944,0.8482,257.1308])
+
+
+  ; genome visualization ideas
+  ; it'd be nice to have a sparkline-style quick graphic view of a genome
+  ; some kind of radial indicator for angle values
+  ; for linear values, perhaps just a percentage-filled block
+  ; across their operational range
+  ; perhaps distinguish the zero point to visualize negative values
+
+  
+
+  (genome-visualization [100 200])
   )
+
+(defn genome-visualization
+    "create a genome visualization structure, which is a vector of maps describing each gene
+    for later rendering purposes."
+    [genome]
+    ;; {:pre [(valid-genome? genome)]}
+    (into []
+          (for [n (range (count genome))
+                :let [{:keys [min max] :as gtype} (get GENOTYPE n)
+                      gene                        (get genome n)
+                      ] ]
+            (assoc gtype
+                   :value    gene
+                   :fraction (/ (- gene min) (- max min))))))
+
+(comment creature hall of fame
+
+; http://localhost:3000/#[163.8498,308.7442,-2.6838,-4.7789,8.9192,-0.8244,9.8865,1.0608,104.7208],[163.8498,308.7442,-2.6838,-5.6789,8.9192,-0.8244,9.8865,1.0608,104.7208],[163.8498,308.7442,-3.5838,-4.7789,8.9192,-0.8244,9.8865,1.0608,104.7208],[145.8498,308.7442,-2.6838,-4.7789,8.9192,-0.8244,9.8865,1.0608,104.7208],[163.8498,308.7442,-1.7838,-4.7789,8.9192,-0.8244,9.8865,1.0608,104.7208],[163.8498,308.7442,-2.6838,-3.8789,8.9192,-0.8244,9.8865,1.0608,104.7208],[163.8498,308.7442,-2.6838,-4.7789,8.9192,-1.7244,9.8865,1.0608,104.7208],[163.8498,308.7442,-2.6838,-4.7789,8.9192,-0.8244,8.0865,1.0608,104.7208],[163.8498,308.7442,-2.6838,-4.7789,8.9192,-0.8244,9.8865,1.0608,86.7208]
+         )

@@ -6,22 +6,15 @@
 
   <script src="/webjars/jquery/1.9.1/jquery.js"></script>
 
-  <link rel="stylesheet" href="/webjars/jquery-ui-themes/1.10.0/ui-darkness/jquery-ui.css" />
-  <script src="/webjars/jquery-ui/1.10.2/ui/jquery-ui.js"></script>
-
-  <script src="/mondrian/js/jquery.ui.touch-punch.js"></script>
-
-  <link rel="stylesheet" href="/mondrian/css/mondrian.css" />
+  <link rel="stylesheet" href="css/biomorphs.css" />
 
   <script src="/js/biomorphs_dev.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function () {
         // set up
-        $('.biomorphs').each(function (index) {
-            console.log("initializing biomorphs for elem", this);
-            biomorphs.biomorphs.debug_single_biomorph(this);
-        });
+        biomorphs.app.debug_single_biomorph($('.biomorphs').toArray()[0],
+                                            $('.biomorphs-genome').toArray()[0]);
 
         biomorphs.repl.connect();
     });
@@ -30,6 +23,7 @@
 
 <body>
   <div>
+    <canvas class="biomorphs-genome" width="1024" height="100"></canvas>
     <canvas class="biomorphs" width="1024" height="1024"></canvas>
   </div>
 </body>
